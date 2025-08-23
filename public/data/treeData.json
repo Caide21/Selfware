@@ -1,0 +1,271 @@
+{
+  "root": {
+    "id": "consciousness",
+    "name": "Consciousness",
+    "path": "consciousness",
+    "depth": 0,
+    "children": [
+      {
+        "id": "awareness",
+        "name": "Awareness",
+        "path": "consciousness/awareness",
+        "depth": 1,
+        "children": [
+          {
+            "id": "self-awareness",
+            "name": "Self Awareness",
+            "path": "consciousness/awareness/self-awareness",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "id": "other-awareness",
+            "name": "Other Awareness",
+            "path": "consciousness/awareness/other-awareness",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "id": "situational-awareness",
+            "name": "Situational Awareness",
+            "path": "consciousness/awareness/situational-awareness",
+            "depth": 2,
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": "attention",
+        "name": "Attention",
+        "path": "consciousness/attention",
+        "depth": 1,
+        "children": [
+          {
+            "id": "focus",
+            "name": "Focus",
+            "path": "consciousness/attention/focus",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "id": "peripheral-awareness",
+            "name": "Peripheral Awareness",
+            "path": "consciousness/attention/peripheral-awareness",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "id": "distraction-mapping",
+            "name": "Distraction Mapping",
+            "path": "consciousness/attention/distraction-mapping",
+            "depth": 2,
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": "perception",
+        "name": "Perception",
+        "path": "consciousness/perception",
+        "depth": 1,
+        "children": [
+          {
+            "id": "sensory-integration",
+            "name": "Sensory Integration",
+            "path": "consciousness/perception/sensory-integration",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "id": "pattern-recognition",
+            "name": "Pattern Recognition",
+            "path": "consciousness/perception/pattern-recognition",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "id": "meaning-assignment",
+            "name": "Meaning Assignment",
+            "path": "consciousness/perception/meaning-assignment",
+            "depth": 2,
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": "memory",
+        "name": "Memory",
+        "path": "consciousness/memory",
+        "depth": 1,
+        "children": [
+          {
+            "id": "episodic",
+            "name": "Episodic",
+            "path": "consciousness/memory/episodic",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "id": "procedural",
+            "name": "Procedural",
+            "path": "consciousness/memory/procedural",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "id": "emotional-memory",
+            "name": "Emotional Memory",
+            "path": "consciousness/memory/emotional-memory",
+            "depth": 2,
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": "emotion",
+        "name": "Emotion",
+        "path": "consciousness/emotion",
+        "depth": 1,
+        "children": [
+          {
+            "id": "recognition",
+            "name": "Recognition",
+            "path": "consciousness/emotion/recognition",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "id": "regulation",
+            "name": "Regulation",
+            "path": "consciousness/emotion/regulation",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "id": "transmutation",
+            "name": "Transmutation",
+            "path": "consciousness/emotion/transmutation",
+            "depth": 2,
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": "language",
+        "name": "Language",
+        "path": "consciousness/language",
+        "depth": 1,
+        "children": [
+          {
+            "id": "internal-dialogue",
+            "name": "Internal Dialogue",
+            "path": "consciousness/language/internal-dialogue",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "id": "symbolic-thinking",
+            "name": "Symbolic Thinking",
+            "path": "consciousness/language/symbolic-thinking",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "id": "narrative-encoding",
+            "name": "Narrative Encoding",
+            "path": "consciousness/language/narrative-encoding",
+            "depth": 2,
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": "imagination",
+        "name": "Imagination",
+        "path": "consciousness/imagination",
+        "depth": 1,
+        "children": [
+          {
+            "id": "visualization",
+            "name": "Visualization",
+            "path": "consciousness/imagination/visualization",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "id": "future-simulation",
+            "name": "Future Simulation",
+            "path": "consciousness/imagination/future-simulation",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "id": "alternate-perspective-modeling",
+            "name": "Alternate Perspective Modeling",
+            "path": "consciousness/imagination/alternate-perspective-modeling",
+            "depth": 2,
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": "will",
+        "name": "Will",
+        "path": "consciousness/will",
+        "depth": 1,
+        "children": [
+          {
+            "id": "intention",
+            "name": "Intention",
+            "path": "consciousness/will/intention",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "id": "decision-loop",
+            "name": "Decision Loop",
+            "path": "consciousness/will/decision-loop",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "id": "self-overriding",
+            "name": "Self Overriding",
+            "path": "consciousness/will/self-overriding",
+            "depth": 2,
+            "children": []
+          }
+        ]
+      },
+      {
+        "id": "integration",
+        "name": "Integration",
+        "path": "consciousness/integration",
+        "depth": 1,
+        "children": [
+          {
+            "id": "reflection",
+            "name": "Reflection",
+            "path": "consciousness/integration/reflection",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "id": "loop-closure",
+            "name": "Loop Closure",
+            "path": "consciousness/integration/loop-closure",
+            "depth": 2,
+            "children": []
+          },
+          {
+            "id": "worldview-upgrade",
+            "name": "Worldview Upgrade",
+            "path": "consciousness/integration/worldview-upgrade",
+            "depth": 2,
+            "children": []
+          }
+        ]
+      }
+    ]
+  }
+}

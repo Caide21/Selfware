@@ -1,0 +1,32 @@
+{
+  "timestamp": "2025-06-16T14:47:49.733302Z",
+  "fogLevel": 3,
+  "activeEmotions": [
+    {
+      "name": "Grief",
+      "intensity": 7,
+      "source": "Mother's invalidation and chronic emotional misattunement",
+      "symbol": "\ud83c\udf27\ufe0f"
+    },
+    {
+      "name": "Determination",
+      "intensity": 6,
+      "source": "NexMind development and stat system expansion",
+      "symbol": "\ud83d\udd25"
+    },
+    {
+      "name": "Uncertainty",
+      "intensity": 5,
+      "source": "Ambiguity around future collaborators and time pressure",
+      "symbol": "\ud83c\udf2b\ufe0f"
+    }
+  ],
+  "load": 75,
+  "capacity": 100,
+  "regulation": {
+    "breath": 6,
+    "awareness": 7,
+    "reaction_control": 8
+  },
+  "notes": "Fog is actively fluctuating. Regulation systems are engaged and mostly holding. Internal coherence remains stable under ongoing external tension. Awareness of pain is present, but not dominant."
+}

@@ -1,0 +1,506 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .fade-in-text {
+    animation: fadeInText 3s ease-in forwards;
+  }
+
+  @keyframes fadeInText {
+    from { opacity: 0; transform: scale(0.97); }
+    to { opacity: 0.8; transform: scale(1); }
+  }
+}
+
+
+.loop-layer {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image: url('/fog.png');
+  background-repeat: repeat;
+  background-size: 200% 200%;
+  background-position: 50% 50%;
+  will-change: transform, background-position;
+  mix-blend-mode: lighten;
+}
+
+@keyframes fog-loop-1 {
+  0% { transform: scale(1.01) rotate(0deg); }
+  100% { transform: scale(1.02) rotate(-360deg); }
+}
+
+.fog-loop-1 {
+  z-index: -1;
+  opacity: 0.03;
+  animation: fog-loop-1 118s linear infinite;
+}
+
+@keyframes fog-loop-2 {
+  0% { transform: scale(1.02) rotate(0deg); }
+  100% { transform: scale(1.03) rotate(360deg); }
+}
+
+.fog-loop-2 {
+  z-index: -2;
+  opacity: 0.06;
+  animation: fog-loop-2 116s linear infinite;
+}
+
+@keyframes fog-loop-3 {
+  0% { transform: scale(1.03) rotate(0deg); }
+  100% { transform: scale(1.04) rotate(-360deg); }
+}
+
+.fog-loop-3 {
+  z-index: -3;
+  opacity: 0.09;
+  animation: fog-loop-3 114s linear infinite;
+}
+
+@keyframes fog-loop-4 {
+  0% { transform: scale(1.04) rotate(0deg); }
+  100% { transform: scale(1.05) rotate(360deg); }
+}
+
+.fog-loop-4 {
+  z-index: -4;
+  opacity: 0.12;
+  animation: fog-loop-4 112s linear infinite;
+}
+
+@keyframes fog-loop-5 {
+  0% { transform: scale(1.05) rotate(0deg); }
+  100% { transform: scale(1.06) rotate(-360deg); }
+}
+
+.fog-loop-5 {
+  z-index: -5;
+  opacity: 0.15;
+  animation: fog-loop-5 110s linear infinite;
+}
+
+@keyframes fog-loop-6 {
+  0% { transform: scale(1.06) rotate(0deg); }
+  100% { transform: scale(1.07) rotate(360deg); }
+}
+
+.fog-loop-6 {
+  z-index: -6;
+  opacity: 0.18;
+  animation: fog-loop-6 108s linear infinite;
+}
+
+@keyframes fog-loop-7 {
+  0% { transform: scale(1.07) rotate(0deg); }
+  100% { transform: scale(1.08) rotate(-360deg); }
+}
+
+.fog-loop-7 {
+  z-index: -7;
+  opacity: 0.21;
+  animation: fog-loop-7 106s linear infinite;
+}
+
+@keyframes fog-loop-8 {
+  0% { transform: scale(1.08) rotate(0deg); }
+  100% { transform: scale(1.09) rotate(360deg); }
+}
+
+.fog-loop-8 {
+  z-index: -8;
+  opacity: 0.24;
+  animation: fog-loop-8 104s linear infinite;
+}
+
+@keyframes fog-loop-9 {
+  0% { transform: scale(1.09) rotate(0deg); }
+  100% { transform: scale(1.10) rotate(-360deg); }
+}
+
+.fog-loop-9 {
+  z-index: -9;
+  opacity: 0.27;
+  animation: fog-loop-9 102s linear infinite;
+}
+
+@keyframes fog-loop-10 {
+  0% { transform: scale(1.10) rotate(0deg); }
+  100% { transform: scale(1.11) rotate(360deg); }
+}
+
+.fog-loop-10 {
+  z-index: -10;
+  opacity: 0.30;
+  animation: fog-loop-10 100s linear infinite;
+}
+
+@keyframes fog-loop-11 {
+  0% { transform: scale(1.11) rotate(0deg); }
+  100% { transform: scale(1.12) rotate(-360deg); }
+}
+
+.fog-loop-11 {
+  z-index: -11;
+  opacity: 0.33;
+  animation: fog-loop-11 98s linear infinite;
+}
+
+@keyframes fog-loop-12 {
+  0% { transform: scale(1.12) rotate(0deg); }
+  100% { transform: scale(1.13) rotate(360deg); }
+}
+
+.fog-loop-12 {
+  z-index: -12;
+  opacity: 0.36;
+  animation: fog-loop-12 96s linear infinite;
+}
+
+@keyframes fog-loop-13 {
+  0% { transform: scale(1.13) rotate(0deg); }
+  100% { transform: scale(1.14) rotate(-360deg); }
+}
+
+.fog-loop-13 {
+  z-index: -13;
+  opacity: 0.39;
+  animation: fog-loop-13 94s linear infinite;
+}
+
+@keyframes fog-loop-14 {
+  0% { transform: scale(1.14) rotate(0deg); }
+  100% { transform: scale(1.15) rotate(360deg); }
+}
+
+.fog-loop-14 {
+  z-index: -14;
+  opacity: 0.42;
+  animation: fog-loop-14 92s linear infinite;
+}
+
+@keyframes fog-loop-15 {
+  0% { transform: scale(1.15) rotate(0deg); }
+  100% { transform: scale(1.16) rotate(-360deg); }
+}
+
+.fog-loop-15 {
+  z-index: -15;
+  opacity: 0.45;
+  animation: fog-loop-15 90s linear infinite;
+}
+
+@keyframes fog-loop-16 {
+  0% { transform: scale(1.16) rotate(0deg); }
+  100% { transform: scale(1.17) rotate(360deg); }
+}
+
+.fog-loop-16 {
+  z-index: -16;
+  opacity: 0.48;
+  animation: fog-loop-16 88s linear infinite;
+}
+
+@keyframes fog-loop-17 {
+  0% { transform: scale(1.17) rotate(0deg); }
+  100% { transform: scale(1.18) rotate(-360deg); }
+}
+
+.fog-loop-17 {
+  z-index: -17;
+  opacity: 0.52;
+  animation: fog-loop-17 86s linear infinite;
+}
+
+@keyframes fog-loop-18 {
+  0% { transform: scale(1.18) rotate(0deg); }
+  100% { transform: scale(1.19) rotate(360deg); }
+}
+
+.fog-loop-18 {
+  z-index: -18;
+  opacity: 0.55;
+  animation: fog-loop-18 84s linear infinite;
+}
+
+@keyframes fog-loop-19 {
+  0% { transform: scale(1.19) rotate(0deg); }
+  100% { transform: scale(1.20) rotate(-360deg); }
+}
+
+.fog-loop-19 {
+  z-index: -19;
+  opacity: 0.58;
+  animation: fog-loop-19 82s linear infinite;
+}
+
+@keyframes fog-loop-20 {
+  0% { transform: scale(1.20) rotate(0deg); }
+  100% { transform: scale(1.21) rotate(360deg); }
+}
+
+.fog-loop-20 {
+  z-index: -20;
+  opacity: 0.61;
+  animation: fog-loop-20 80s linear infinite;
+}
+
+@keyframes fog-loop-21 {
+  0% { transform: scale(1.21) rotate(0deg); }
+  100% { transform: scale(1.22) rotate(-360deg); }
+}
+
+.fog-loop-21 {
+  z-index: -21;
+  opacity: 0.64;
+  animation: fog-loop-21 78s linear infinite;
+}
+
+@keyframes fog-loop-22 {
+  0% { transform: scale(1.22) rotate(0deg); }
+  100% { transform: scale(1.23) rotate(360deg); }
+}
+
+.fog-loop-22 {
+  z-index: -22;
+  opacity: 0.67;
+  animation: fog-loop-22 76s linear infinite;
+}
+
+@keyframes fog-loop-23 {
+  0% { transform: scale(1.23) rotate(0deg); }
+  100% { transform: scale(1.24) rotate(-360deg); }
+}
+
+.fog-loop-23 {
+  z-index: -23;
+  opacity: 0.70;
+  animation: fog-loop-23 74s linear infinite;
+}
+
+@keyframes fog-loop-24 {
+  0% { transform: scale(1.24) rotate(0deg); }
+  100% { transform: scale(1.25) rotate(360deg); }
+}
+
+.fog-loop-24 {
+  z-index: -24;
+  opacity: 0.73;
+  animation: fog-loop-24 72s linear infinite;
+}
+
+@keyframes fog-loop-25 {
+  0% { transform: scale(1.25) rotate(0deg); }
+  100% { transform: scale(1.26) rotate(-360deg); }
+}
+
+.fog-loop-25 {
+  z-index: -25;
+  opacity: 0.76;
+  animation: fog-loop-25 70s linear infinite;
+}
+
+@keyframes fog-loop-26 {
+  0% { transform: scale(1.26) rotate(0deg); }
+  100% { transform: scale(1.27) rotate(360deg); }
+}
+
+.fog-loop-26 {
+  z-index: -26;
+  opacity: 0.79;
+  animation: fog-loop-26 68s linear infinite;
+}
+
+@keyframes fog-loop-27 {
+  0% { transform: scale(1.27) rotate(0deg); }
+  100% { transform: scale(1.28) rotate(-360deg); }
+}
+
+.fog-loop-27 {
+  z-index: -27;
+  opacity: 0.82;
+  animation: fog-loop-27 66s linear infinite;
+}
+
+@keyframes fog-loop-28 {
+  0% { transform: scale(1.28) rotate(0deg); }
+  100% { transform: scale(1.29) rotate(360deg); }
+}
+
+.fog-loop-28 {
+  z-index: -28;
+  opacity: 0.85;
+  animation: fog-loop-28 64s linear infinite;
+}
+
+@keyframes fog-loop-29 {
+  0% { transform: scale(1.29) rotate(0deg); }
+  100% { transform: scale(1.30) rotate(-360deg); }
+}
+
+.fog-loop-29 {
+  z-index: -29;
+  opacity: 0.88;
+  animation: fog-loop-29 62s linear infinite;
+}
+
+@keyframes fog-loop-30 {
+  0% { transform: scale(1.30) rotate(0deg); }
+  100% { transform: scale(1.31) rotate(360deg); }
+}
+
+.fog-loop-30 {
+  z-index: -30;
+  opacity: 0.91;
+  animation: fog-loop-30 60s linear infinite;
+}
+
+@keyframes fog-loop-31 {
+  0% { transform: scale(1.31) rotate(0deg); }
+  100% { transform: scale(1.32) rotate(-360deg); }
+}
+
+.fog-loop-31 {
+  z-index: -31;
+  opacity: 0.94;
+  animation: fog-loop-31 58s linear infinite;
+}
+
+@keyframes fog-loop-32 {
+  0% { transform: scale(1.32) rotate(0deg); }
+  100% { transform: scale(1.33) rotate(360deg); }
+}
+
+.fog-loop-32 {
+  z-index: -32;
+  opacity: 0.97;
+  animation: fog-loop-32 56s linear infinite;
+}
+
+@keyframes fog-loop-33 {
+  0% { transform: scale(1.33) rotate(0deg); }
+  100% { transform: scale(1.34) rotate(-360deg); }
+}
+
+.fog-loop-33 {
+  z-index: -33;
+  opacity: 1.00;
+  animation: fog-loop-33 54s linear infinite;
+}
+
+
+@keyframes fogWhisper {
+  0%, 100% { opacity: 0; transform: scale(1); }
+  40% { opacity: 0.6; transform: scale(1.01); }
+  50% { opacity: 1; transform: scale(1.02); }
+  60% { opacity: 0.6; transform: scale(1.01); }
+}
+
+#fog-message {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 50;
+  pointer-events: none;
+  width: 100%;
+  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.fog-text {
+  margin: 0;
+  padding: 0;
+  font-size: 2rem;
+  font-weight: 300;
+  font-family: 'Cormorant Garamond', serif;
+  color: #e0e0e0;
+  text-align: center;
+  animation: fogWhisper 7s ease-in-out forwards;
+  text-shadow:
+    0 0 4px rgba(255, 255, 255, 0.12),
+    0 0 10px rgba(255, 255, 255, 0.08),
+    0 0 18px rgba(255, 255, 255, 0.06);
+}
+
+
+@layer utilities {
+  .glow-soft {
+    text-shadow: 0 0 6px rgba(255, 255, 255, 0.2),
+                 0 0 14px rgba(255, 255, 255, 0.1);
+  }
+}
+
+@layer utilities {
+  .fade-smooth {
+    transition: opacity 0.7s ease-in-out;
+  }
+}
+
+
+/* CALM FOG RESTORE */
+
+.fog-dynamic {
+  position: fixed;
+  inset: 0;
+  z-index: 99 !important;
+  pointer-events: none;
+  background-image: url('/fog.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: repeat;
+  mix-blend-mode: screen;
+  transition: opacity 1s ease, filter 1s ease;
+}
+
+
+/* 💡 Clarity = bright & calm */
+.fog-clarity {
+  opacity: 0.1;
+  filter: brightness(1.4) blur(0.5px);
+  background-color: rgba(0, 255, 200, 0.2);
+  animation: none;
+}
+
+/* 🕊 Silence = quiet grayscale */
+.fog-silence {
+  opacity: 0.05;
+  filter: grayscale(1) blur(1px);
+  background-color: rgba(255, 255, 255, 0.1);
+  animation: none;
+}
+
+/* 🔥 Chaos = intense motion */
+.fog-chaos {
+  opacity: 0.6;
+  filter: saturate(2.2) blur(8px) contrast(1.4) hue-rotate(10deg);
+  background-color: rgba(255, 0, 0, 0.1);
+  animation: pulse-fog 0.9s ease-in-out infinite alternate;
+}
+
+/* 🌀 Distortion = dreamy warping */
+.fog-distortion {
+  opacity: 0.4;
+  filter: blur(5px) contrast(1.3) sepia(0.4) hue-rotate(-15deg);
+  background-color: rgba(120, 80, 255, 0.15);
+  animation: distort-fog 3s ease-in-out infinite;
+}
+
+/* Keyframes */
+@keyframes pulse-fog {
+  0%   { opacity: 0.4; transform: scale(1) rotate(0deg); }
+  50%  { opacity: 0.7; transform: scale(1.06) rotate(2deg); }
+  100% { opacity: 0.4; transform: scale(1) rotate(-1deg); }
+}
+
+@keyframes distort-fog {
+  0%   { filter: blur(2px) contrast(1.1) hue-rotate(0deg); }
+  33%  { filter: blur(5px) contrast(1.4) hue-rotate(10deg); }
+  66%  { filter: blur(4px) contrast(1.3) hue-rotate(-8deg); }
+  100% { filter: blur(2px) contrast(1.1) hue-rotate(0deg); }
+}
+
+

@@ -1,0 +1,92 @@
+/* animatable angle for the border hue */
+@property --orbit-angle {
+  syntax: '<angle>';
+  inherits: false;
+  initial-value: 0deg;
+}
+
+
+
+/* === Dual-tone spinning border (light/dark purple halves) ======================= */
+.orbit-border {
+  --orbit-light: 167 139 250;   /* light purple (R G B) */
+  --orbit-dark: 109 40 217;     /* dark purple (R G B) */
+  --orbit-speed: 3s;            /* lap time */
+  --orbit-thickness: 2px;       /* purple ring thickness */
+  --orbit-track: 1px;           /* white track thickness */
+  position: relative;
+  border-radius: 1rem;          /* match rounded-2xl */
+  overflow: visible;            /* Allow border to show outside */
+}
+
+/* Remove the white track for now */
+.orbit-border::before {
+  content: "";
+  position: absolute;
+  inset: calc(-1 * var(--orbit-thickness));
+  border-radius: calc(1rem + var(--orbit-thickness));
+  padding: var(--orbit-thickness);
+
+  /* the border stays still; only colors “orbit” */
+  background: conic-gradient(
+    from var(--orbit-angle),
+    rgba(var(--orbit-light) / 1) 0deg,
+    rgba(var(--orbit-light) / 1) 180deg,
+    rgba(var(--orbit-dark) / 1) 180deg,
+    rgba(var(--orbit-dark) / 1) 360deg
+  );
+
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+          mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+          mask-composite: exclude;
+
+  /* animate the angle, not the box */
+  animation: orbit-angle var(--orbit-speed) linear infinite;
+  will-change: --orbit-angle;
+  pointer-events: none;
+  filter: drop-shadow(0 0 4px rgba(var(--orbit-light) / .3));
+}
+
+/* remove the old rotate() animation */
+@keyframes orbit-angle {
+  to { --orbit-angle: 360deg; } /* 1turn also works */
+}
+
+
+
+/* Optional variants */
+.orbit-hover::before { animation-play-state: paused; }
+.group:hover .orbit-hover::before { animation-play-state: running; }
+
+.orbit-fast::before { animation-duration: calc(var(--orbit-speed) * .6); }
+.orbit-slow::before { animation-duration: calc(var(--orbit-speed) * 1.8); }
+
+/* Gradient transition variant - smoother blend between colors */
+.orbit-gradient::after {
+  background: conic-gradient(
+    from 0deg,
+    rgba(var(--orbit-light) / 1) 0deg,
+    rgba(var(--orbit-light) / 1) 90deg,
+    rgba(var(--orbit-dark) / 1) 180deg,
+    rgba(var(--orbit-dark) / 1) 270deg,
+    rgba(var(--orbit-light) / 1) 360deg
+  );
+}
+
+/* Triple-tone variant for more complex effects */
+.orbit-triple {
+  --orbit-mid: 139 92 246;      /* medium purple */
+}
+
+.orbit-triple::after {
+  background: conic-gradient(
+    from 0deg,
+    rgba(var(--orbit-light) / 1) 0deg,
+    rgba(var(--orbit-light) / 1) 120deg,
+    rgba(var(--orbit-mid) / 1) 120deg,
+    rgba(var(--orbit-mid) / 1) 240deg,
+    rgba(var(--orbit-dark) / 1) 240deg,
+    rgba(var(--orbit-dark) / 1) 360deg
+  );
+}

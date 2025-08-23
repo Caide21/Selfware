@@ -1,0 +1,141 @@
+[
+  {
+    "id": "ritual_box_breathing",
+    "title": "Box Breathing",
+    "category": "Breath",
+    "tierRequired": 2,
+    "effects": {
+      "focus": 15,
+      "regulation": 20
+    },
+    "duration": "5 min",
+    "phases": [
+      "Inhale 4s",
+      "Hold 4s",
+      "Exhale 4s",
+      "Hold 4s"
+    ],
+    "symbolicNotes": "Stabilizes cognitive/emotional oscillation. Use when fogged or scattered.",
+    "glyph": "\ud83d\udd32",
+    "type": "Active",
+    "linkedStats": [
+      "focus",
+      "regulation"
+    ],
+    "linkedQuests": [],
+    "linkedTalents": []
+  },
+  {
+    "id": "ritual_loop_closure",
+    "title": "Loop Closure Ritual",
+    "category": "Reflection",
+    "tierRequired": 3,
+    "effects": {
+      "clarity": 25,
+      "inner_coherence": 20
+    },
+    "duration": "10\u201315 min",
+    "phases": [
+      "Review what was done",
+      "Why it mattered",
+      "How it evolved you",
+      "Seal with intention"
+    ],
+    "symbolicNotes": "Closes energetic and narrative loops. Prevents internal fragmentation.",
+    "glyph": "\ud83c\udf00",
+    "type": "Reflection",
+    "linkedStats": [
+      "clarity",
+      "inner_coherence"
+    ],
+    "linkedQuests": [
+      "main_quest_resurrection"
+    ],
+    "linkedTalents": []
+  },
+  {
+    "id": "ritual_flowstorm_entry",
+    "title": "Flowstorm Entry Protocol",
+    "category": "Cognitive",
+    "tierRequired": 4,
+    "effects": {
+      "focus": 30,
+      "processing_speed": 25,
+      "decision_agility": 15
+    },
+    "duration": "15 min + sustain",
+    "phases": [
+      "Buff stack alignment",
+      "Distraction purge",
+      "Scroll loading",
+      "Breath trigger"
+    ],
+    "symbolicNotes": "Gateway to high-output, fully aligned action states.",
+    "glyph": "\u26a1",
+    "type": "Buff Mode",
+    "linkedStats": [
+      "focus",
+      "processing_speed",
+      "decision_agility"
+    ],
+    "linkedQuests": [],
+    "linkedTalents": [
+      "flowstorm_talent_core"
+    ]
+  },
+  {
+    "id": "ritual_fog_cleanse",
+    "title": "Fog Cleanse",
+    "category": "Emotional",
+    "tierRequired": 2,
+    "effects": {
+      "clarity": 20,
+      "emotional_range": 10
+    },
+    "duration": "3\u20137 min",
+    "phases": [
+      "Identify active fog",
+      "Name emotion",
+      "Track source",
+      "Breathe & reset"
+    ],
+    "symbolicNotes": "For moments of misalignment, overwhelm, or feedback distortion.",
+    "glyph": "\ud83c\udf2b\ufe0f",
+    "type": "Emergency",
+    "linkedStats": [
+      "clarity",
+      "emotional_range"
+    ],
+    "linkedQuests": [],
+    "linkedTalents": []
+  },
+  {
+    "id": "ritual_self_alignment",
+    "title": "Self Alignment Protocol",
+    "category": "Spiritual",
+    "tierRequired": 5,
+    "effects": {
+      "alignment": 30,
+      "presence": 20
+    },
+    "duration": "20\u201330 min",
+    "phases": [
+      "Silence",
+      "Mirror gaze",
+      "Re-state values",
+      "Recommit to action"
+    ],
+    "symbolicNotes": "Aligns symbolic field with will. Used after chaotic periods or heavy emotion.",
+    "glyph": "\ud83e\udded",
+    "type": "Anchor",
+    "linkedStats": [
+      "alignment",
+      "presence"
+    ],
+    "linkedQuests": [
+      "scroll_of_resonance",
+      "discipline_of_resurrection"
+    ],
+    "linkedTalents": []
+  }
+]

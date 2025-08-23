@@ -1,0 +1,223 @@
+{
+  "project": "Selfware_Lite",
+  "type": "fullstack",
+  "path": ".",
+  "groups": [
+    {
+      "dir": "backend/api/emotion",
+      "files": ["classify.js"]
+    },
+    {
+      "dir": "backend/classifiers",
+      "files": [
+        "emotionClassifier.py",
+        "__init__.py",
+        "emotionServer.py",
+        "emotion_classifier1.py",
+        "emotion_tree_expanded.json"
+      ]
+    },
+    {
+      "dir": "backend/classifiers/__pycache__",
+      "files": [
+        "__init__.cpython-313.pyc",
+        "emotionServer.cpython-313.pyc",
+        "emotion_classifier1.cpython-313.pyc"
+      ]
+    },
+    {
+      "dir": "components",
+      "files": [
+        "BlockRenderer.jsx",
+        "NavigationLink.jsx",
+        "SectionHeading.jsx",
+        "SmartRenderer.jsx"
+      ]
+    },
+    {
+      "dir": "components/Cards",
+      "files": [
+        "CodexCard.jsx", "EmotionCard.jsx", "QuestCard.jsx",
+        "RitualCard.jsx", "ScrollCard.jsx", "SkillCard.jsx",
+        "StatCard.jsx", "index.js"
+      ]
+    },
+    {
+      "dir": "components/Containers",
+      "files": ["MapContainer.jsx", "Scroll.jsx", "ScrollContainer.jsx"]
+    },
+    {
+      "dir": "components/ERS",
+      "files": [
+        "ResonanceInput.jsx", "SendReflection.js", "breathing_background_manager.jsx"
+      ]
+    },
+    {
+      "dir": "components/Enchantments",
+      "files": [
+        "GlyphTree.jsx", "PhaseShiftLayer.jsx", "PortalGardenScene.jsx",
+        "PsyTripEngine.jsx", "ThreeScene.jsx", "index.js"
+      ]
+    },
+    {
+      "dir": "components/Frames",
+      "files": ["PageFrame.jsx", "ScrollFrame.jsx"]
+    },
+    {
+      "dir": "components/Hooks",
+      "files": ["ThemeToggle.jsx", "index.js", "useIdle.jsx"]
+    },
+    {
+      "dir": "components/Layout",
+      "files": [
+        "Nav.jsx", "PageHeading.jsx", "PageShell.jsx",
+        "PageWrapper.jsx", "ParchmentWrapper.jsx", "index.js"
+      ]
+    },
+    {
+      "dir": "components/Mirror",
+      "files": [
+        "EmotionMap.jsx", "EmotionSummary.jsx", "FeaturedScrollPanel.jsx",
+        "FocusPanel.jsx", "RecentLogPanel.jsx", "RegulationPanel.jsx",
+        "RitualMap.jsx", "SkillMap.jsx", "StatMap.jsx"
+      ]
+    },
+    {
+      "dir": "components/Modals",
+      "files": ["RegistrationModal.jsx"]
+    },
+    {
+      "dir": "components/Pages",
+      "files": [
+        "CodexPage.jsx", "JoinPage.jsx", "MirrorPage.jsx",
+        "QuestPage.jsx", "RitualPage.jsx", "ScrollPage.jsx",
+        "StatPage.jsx", "index.js"
+      ]
+    },
+    {
+      "dir": "components/Quests",
+      "files": ["QuestLog.jsx"]
+    },
+    {
+      "dir": "components/Zones",
+      "files": [
+        "CodexLibrary.jsx", "LandingWorld.jsx", "NPCChair.jsx",
+        "NeuralFloor.jsx", "Portals.jsx", "QuestGrove.jsx", "index.js"
+      ]
+    },
+    {
+      "dir": "context",
+      "files": ["ThemeContext.js"]
+    },
+    {
+      "dir": "data",
+      "files": ["map.json"]
+    },
+    {
+      "dir": "hooks",
+      "files": [
+        "useIdentity.js", "useIdle.js", "useResonance.js", "useSnapshots.js"
+      ]
+    },
+    {
+      "dir": "lib/agents",
+      "files": ["StatEvaluator.js"]
+    },
+    {
+      "dir": "lib",
+      "files": [
+        "colors.js", "notion.js", "quests.js",
+        "sendConfirmation.js", "supabase.js", "zones.js"
+      ]
+    },
+    {
+      "dir": "pages/api",
+      "files": [
+        "classify.js", "create-paystack-session.js", "fetch-codex.js",
+        "register.js", "test-email.js"
+      ]
+    },
+    {
+      "dir": "pages/api/session",
+      "files": ["init.js"]
+    },
+    {
+      "dir": "pages/caide",
+      "files": [
+        "about.js", "clients.js", "contact.js",
+        "identity.js", "index.js", "services.js", "success.js"
+      ]
+    },
+    {
+      "dir": "pages/join",
+      "files": ["contact.js", "friends.js", "index.js", "login.js", "work.js"]
+    },
+    {
+      "dir": "pages/mirror",
+      "files": [
+        "emotion.js", "fetch.js", "index.js",
+        "interface.js", "map.js", "scroll.js",
+        "spellbook.js", "stats.js", "tree.js"
+      ]
+    },
+    {
+      "dir": "pages/quests",
+      "files": ["index.js"]
+    },
+    {
+      "dir": "pages",
+      "files": [
+        "[slug].js", "_app.js", "_document.js", "codex.js",
+        "codex3d.js", "home.js", "index.js", "portal-garden.js"
+      ]
+    },
+    {
+      "dir": "public/data",
+      "files": [
+        "caide_stat_sheet.json", "emotionalState.json",
+        "rituals.json", "skillTree.json", "treeData.json"
+      ]
+    },
+    {
+      "dir": "public/textures",
+      "files": ["scroll-fabric-full.png"]
+    },
+    {
+      "dir": "public",
+      "files": [
+        "favicon.ico", "file.svg", "fog.png", "fogTexture.png",
+        "globe.svg", "neural-web.png", "next.svg",
+        "tree.html", "vercel.svg", "window.svg"
+      ]
+    },
+    {
+      "dir": "styles",
+      "files": [
+        "fog.css", "globals._projectaethercss", "globals.css",
+        "mergeTree.css", "z-layer.css"
+      ]
+    },
+    {
+      "dir": "utils/plugins/ers",
+      "files": [
+        "ERSWrapper.jsx", "SilentERSManager.js", "autoInject.js",
+        "ers.config.json", "ersBehaviorTracker.js",
+        "ersSnapshotSchema.js", "ersStateMode.js",
+        "fogEngine.js", "fogHandler.js", "index.js"
+      ]
+    },
+    {
+      "dir": "utils",
+      "files": ["fingerprint.js", "sessionManager.js"]
+    },
+    {
+      "dir": ".",
+      "files": [
+        "README.md", "all-files.txt", "eslint.config.mjs", "frontend-requirements.txt",
+        "jsconfig.json", "next.config.mjs", "package-lock.json",
+        "package.json", "postcss.config.js", "setup.sh", "tailwind.config.js",
+        "requirements.txt", "start_ers.sh"
+      ]
+    }
+  ]
+}

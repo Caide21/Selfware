@@ -1,0 +1,13 @@
+# API server
+flask
+flask-cors
+
+# Fuzzy logic + string matching
+rapidfuzz
+
+# Optional: only needed if you do complex json parsing or pretty print logs
+# json5
+
+# Python version is implied, but if needed:
+# python >=3.10
+

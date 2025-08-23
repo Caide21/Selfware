@@ -1,0 +1,128 @@
+{
+  "EMOTION_ROOT": {
+    "LOVE": {
+      "Joy": [
+        "Wonder",
+        "Excitement",
+        "Playfulness",
+        "Intimacy",
+        "Happiness",
+        "Bliss",
+        "Elation",
+        "Radiance",
+        "Delight",
+        "Satisfaction"
+      ],
+      "Peace": [
+        "Calm",
+        "Presence",
+        "Flow",
+        "Contentment",
+        "Stillness",
+        "Ease",
+        "Serenity",
+        "Relief",
+        "Security",
+        "Centeredness"
+      ],
+      "Trust": [
+        "Confidence",
+        "Curiosity",
+        "Surrender",
+        "Openness",
+        "Faith",
+        "Assurance",
+        "Clarity",
+        "Loyalty",
+        "Stability",
+        "Reliability"
+      ],
+      "Gratitude": [
+        "Appreciation",
+        "Empathy",
+        "Compassion",
+        "Connection",
+        "Thankfulness",
+        "Recognition",
+        "Admiration",
+        "Affection",
+        "Respect",
+        "Warmth"
+      ],
+      "Empowerment": [
+        "Courage",
+        "Freedom",
+        "Alignment",
+        "Self-worth",
+        "Motivation",
+        "Agency",
+        "Autonomy",
+        "Pride",
+        "Vitality",
+        "Awareness"
+      ]
+    },
+    "FEAR": {
+      "Anger": [
+        "Frustration",
+        "Resentment",
+        "Rage",
+        "Vengeance",
+        "Irritation",
+        "Annoyance",
+        "Bitterness",
+        "Disgust",
+        "Defiance",
+        "Fury"
+      ],
+      "Shame": [
+        "Embarrassment",
+        "Worthlessness",
+        "Insignificance",
+        "Fragility",
+        "Self-loathing",
+        "Disgrace",
+        "Humiliation",
+        "Guilt",
+        "Failure",
+        "Judgment"
+      ],
+      "Control": [
+        "Obsession",
+        "Possessiveness",
+        "Withdrawal",
+        "Domination",
+        "Perfectionism",
+        "Rigidity",
+        "Desperation",
+        "Suspicion",
+        "Micromanaging",
+        "Inflexibility"
+      ],
+      "Guilt": [
+        "Regret",
+        "Apology",
+        "Hesitation",
+        "Duty",
+        "Obligation",
+        "Remorse",
+        "Blame",
+        "Shyness",
+        "Avoidance",
+        "Overthinking"
+      ],
+      "Anxiety": [
+        "Uncertainty",
+        "Nervousness",
+        "Overthinking",
+        "Doubt",
+        "Restlessness",
+        "Insecurity",
+        "Tension",
+        "Overwhelm",
+        "Edginess",
+        "Paranoia"
+      ]
+    }
+  }
+}

@@ -1,0 +1,141 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ========= ⚙️ Base ========= */
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-white dark:bg-gray-950 text-gray-800 dark:text-gray-100;
+  font-family: 'Inter', sans-serif;
+}
+
+/* ========= 🎨 Symbolic Text Tokens ========= */
+.theme-heading {
+  @apply text-gray-900 dark:text-gray-100;
+}
+
+.theme-muted {
+  @apply text-gray-600 dark:text-gray-400;
+}
+
+.theme-text {
+  @apply text-gray-700 dark:text-gray-300;
+}
+
+/* ========= 🌀 Cards ========= */
+.theme-scroll-card {
+  @apply bg-white dark:bg-gray-900 
+         text-gray-900 dark:text-white 
+         border border-gray-200 dark:border-gray-700 
+         rounded-xl p-6 
+         shadow-sm hover:shadow-md 
+         transition duration-300 ease-in-out 
+         hover:scale-[1.01];
+}
+
+/* ========= ✅ Symbol Blocks ========= */
+.theme-success {
+  @apply bg-green-50 text-green-800 
+         border border-green-400 
+         dark:bg-green-900 dark:text-green-100 dark:border-green-600;
+}
+
+.theme-glyph {
+  @apply bg-violet-50 text-violet-700 
+         border border-violet-200 
+         dark:bg-violet-900 dark:text-violet-100 dark:border-violet-700;
+}
+
+/* ========= 🌌 Psychedelic Weather Engine ========= */
+@keyframes hue-drift {
+  0% { filter: hue-rotate(0deg); }
+  50% { filter: hue-rotate(6deg); }
+  100% { filter: hue-rotate(0deg); }
+}
+.animate-hue-drift {
+  animation: hue-drift 24s ease-in-out infinite;
+}
+
+.psy-aura {
+  filter: brightness(1.04) saturate(1.05);
+}
+
+@keyframes sigil-pulse {
+  0% { opacity: 0.1; transform: scale(0.95); }
+  50% { opacity: 0.4; transform: scale(1.05); }
+  100% { opacity: 0.1; transform: scale(0.95); }
+}
+.animate-sigil-pulse {
+  animation: sigil-pulse 8s ease-in-out infinite;
+}
+
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-4px); }
+  100% { transform: translateY(0px); }
+}
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+@keyframes float-slower {
+  0% { transform: translateY(0px) translateX(0px); }
+  50% { transform: translateY(-3px) translateX(2px); }
+  100% { transform: translateY(0px) translateX(0px); }
+}
+.animate-float-slower {
+  animation: float-slower 12s ease-in-out infinite;
+}
+
+.animate-pulse-slow {
+  animation: pulse 5s ease-in-out infinite;
+}
+
+/* PSYTRIP MODE: Progressive distortion via --psyIntensity (0 to 1) */
+html.psy-trip * {
+  filter: hue-rotate(calc(var(--psyIntensity) * 8deg))
+          blur(calc(var(--psyIntensity) * 0.5px))
+          brightness(calc(1 + var(--psyIntensity) * 0.05))
+          saturate(calc(1 + var(--psyIntensity) * 0.1));
+  transform: perspective(1000px) rotateX(calc(sin(var(--time)) * 1deg));
+  transition: all 0.4s ease;
+}
+
+/* ========= 🔮 ScrollCard Enchantments ========= */
+.enchant-card {
+  transition: all 0.4s ease;
+}
+
+.enchant-card:hover {
+  transform: scale(1.015) rotateX(0.5deg) rotateY(-0.5deg);
+  box-shadow: 0 0 12px 2px rgba(139, 92, 246, 0.35); /* violet glow */
+}
+
+/* Ripple for Install Text */
+@keyframes ripple-text {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.04); opacity: 0.8; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.group-hover\\:animate-ripple-text:hover {
+  animation: ripple-text 1.6s ease-in-out infinite;
+}
+
+.install-button {
+  background: rgba(139, 92, 246, 0.08); /* violet base */
+  color: #8b5cf6;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+  transition: all 0.3s ease;
+}
+
+.install-button:hover {
+  background: rgba(139, 92, 246, 0.12);
+  border-color: rgba(139, 92, 246, 0.5);
+}
+
+.mirror-glass-card {
+  @apply bg-white/5 backdrop-blur-md border border-white/20 shadow-inner rounded-xl;
+}

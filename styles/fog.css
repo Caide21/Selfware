@@ -1,0 +1,34 @@
+.fog-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    pointer-events: none;
+    z-index: 9999;
+    opacity: 0.8;
+    animation: fadeOut 3s ease forwards;
+  }
+  
+  @keyframes fadeOut {
+    0% { opacity: 0.8; }
+    100% { opacity: 0; }
+  }
+  
+  .fog-joy {
+    background: radial-gradient(circle, rgba(255,223,0,0.2) 0%, rgba(255,255,255,0) 70%);
+  }
+  
+  .fog-regret {
+    background: radial-gradient(circle, rgba(100,100,120,0.3) 0%, rgba(0,0,0,0.6) 80%);
+  }
+  
+  .fog-curiosity {
+    background: radial-gradient(circle, rgba(173,216,230,0.3) 0%, rgba(0,0,0,0) 70%);
+    backdrop-filter: blur(3px);
+  }
+  
+  .fog-myst {
+    background: radial-gradient(circle, rgba(180,180,255,0.2) 0%, rgba(255,255,255,0) 70%);
+    backdrop-filter: blur(2px);
+  }

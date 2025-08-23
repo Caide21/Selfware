@@ -1,0 +1,156 @@
+[
+  {
+    "id": "node_reflection",
+    "label": "Recursive Reflection",
+    "tier": 4,
+    "prerequisites": [],
+    "linkedStats": [
+      "meta_awareness"
+    ],
+    "category": "Cognitive",
+    "type": "core",
+    "description": "Ability to reflect recursively and catch internal feedback loops."
+  },
+  {
+    "id": "node_prompting",
+    "label": "Reflective Prompt Engineering",
+    "tier": 3,
+    "prerequisites": [
+      "node_reflection"
+    ],
+    "linkedStats": [
+      "clarity"
+    ],
+    "category": "Cognitive",
+    "type": "talent",
+    "description": "Using AI as a mirror to evolve internal systems through precision prompts."
+  },
+  {
+    "id": "node_stat_system",
+    "label": "Stat System Architect",
+    "tier": 3,
+    "prerequisites": [
+      "node_reflection"
+    ],
+    "linkedStats": [
+      "meta_awareness",
+      "clarity"
+    ],
+    "category": "System",
+    "type": "core",
+    "description": "Designed and implemented a human OS stat tracking framework."
+  },
+  {
+    "id": "node_ers",
+    "label": "ERS System Designer",
+    "tier": 2,
+    "prerequisites": [
+      "node_stat_system"
+    ],
+    "linkedStats": [
+      "clarity",
+      "emotional_range"
+    ],
+    "category": "System",
+    "type": "core",
+    "description": "Emotional Resonance System that captures real-time behavior-based feedback."
+  },
+  {
+    "id": "node_loop_closure",
+    "label": "Loop Closure Ritual",
+    "tier": 4,
+    "prerequisites": [],
+    "linkedStats": [
+      "clarity",
+      "inner_coherence"
+    ],
+    "category": "Ritual",
+    "type": "core",
+    "description": "Ritual that integrates completed actions into growth and narrative coherence."
+  },
+  {
+    "id": "node_fog_cleanse",
+    "label": "Fog Cleanse",
+    "tier": 3,
+    "prerequisites": [],
+    "linkedStats": [
+      "clarity",
+      "emotional_range"
+    ],
+    "category": "Ritual",
+    "type": "ritual",
+    "description": "Symbolic protocol for clearing emotional or cognitive fog."
+  },
+  {
+    "id": "node_flowstorm",
+    "label": "Flowstorm Entry Protocol",
+    "tier": 3,
+    "prerequisites": [
+      "node_prompting"
+    ],
+    "linkedStats": [
+      "focus",
+      "processing_speed"
+    ],
+    "category": "Ritual",
+    "type": "buff",
+    "description": "Ritual stack for entering high-output aligned action."
+  },
+  {
+    "id": "node_alignment_protocol",
+    "label": "Self-Alignment Protocol",
+    "tier": 4,
+    "prerequisites": [
+      "node_loop_closure"
+    ],
+    "linkedStats": [
+      "alignment",
+      "presence"
+    ],
+    "category": "Spiritual",
+    "type": "anchor",
+    "description": "High-tier ritual for restoring symbolic alignment and presence."
+  },
+  {
+    "id": "node_zone_structuring",
+    "label": "Zone Structuring",
+    "tier": 2,
+    "prerequisites": [],
+    "linkedStats": [
+      "clarity"
+    ],
+    "category": "Design",
+    "type": "map",
+    "description": "Structured the project into symbolic zones, scrolls, and quests."
+  },
+  {
+    "id": "node_codex_scrolls",
+    "label": "Codex + Scroll Encoding",
+    "tier": 3,
+    "prerequisites": [
+      "node_zone_structuring"
+    ],
+    "linkedStats": [
+      "clarity",
+      "creativity"
+    ],
+    "category": "Design",
+    "type": "symbol",
+    "description": "Translated insights into scrolls, glyphs, and modular codex entries."
+  },
+  {
+    "id": "node_ai_companion",
+    "label": "AI Companion Design",
+    "tier": 3,
+    "prerequisites": [
+      "node_prompting"
+    ],
+    "linkedStats": [
+      "clarity",
+      "meta_awareness"
+    ],
+    "category": "System",
+    "type": "coagent",
+    "description": "Created a reflective agent (Aether) that mirrors and co-evolves with the self."
+  }
+]

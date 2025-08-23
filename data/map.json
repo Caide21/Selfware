@@ -1,0 +1,57 @@
+{
+  "name": "Drugs",
+  "type": "root",
+  "children": [
+    {
+      "name": "Stimulants",
+      "type": "category",
+      "children": [
+        {
+          "name": "Vyvanse",
+          "type": "substance",
+          "uses": {
+            "risks": ["Dopamine depletion", "Crash"],
+            "rewards": ["Focus", "Clarity"],
+            "effects": {
+              "mind": "Boosted cognition",
+              "body": "Increased heart rate",
+              "soul": "Can desync emotional awareness"
+            }
+          }
+        },
+        {
+          "name": "Cocaine",
+          "type": "substance",
+          "uses": {
+            "risks": ["Addiction", "Paranoia"],
+            "rewards": ["Euphoria", "Confidence"],
+            "effects": {
+              "mind": "Surge then crash",
+              "body": "High stimulation",
+              "soul": "Disruptive intensity"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Benzodiazepines",
+      "type": "category",
+      "children": [
+        {
+          "name": "Xanax",
+          "type": "substance",
+          "uses": {
+            "risks": ["Dependency", "Lethargy"],
+            "rewards": ["Calm", "Anxiety relief"],
+            "effects": {
+              "mind": "Slows thought",
+              "body": "Relaxes muscles",
+              "soul": "Emotional flattening"
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
