@@ -1,9 +1,9 @@
 ﻿import { useMemo } from 'react';
 import CardView from '@/components/CardBuilder/CardView';
 import SectionBand from '@/components/Surface/SectionBand';
-import PrimaryButton from '@/components/UI/PrimaryButton';
-import GhostButton from '@/components/UI/GhostButton';
-import Chip from '@/components/UI/Chip';
+import PrimaryButton from '@/components/ui/PrimaryButton';
+import GhostButton from '@/components/ui/GhostButton';
+import Chip from '@/components/ui/Chip';
 import CardEditor from '@/components/CardBuilder/CardEditor';
 import { useCardStore } from '@/components/CardBuilder/useCardStore';
 import { apply } from '@/components/CardBuilder/mutations';

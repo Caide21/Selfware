@@ -1,8 +1,8 @@
 ﻿import Link from 'next/link';
 import SectionBand from '@/components/Surface/SectionBand';
-import PrimaryButton from '@/components/UI/PrimaryButton';
-import GhostButton from '@/components/UI/GhostButton';
-import Chip from '@/components/UI/Chip';
+import PrimaryButton from '@/components/ui/PrimaryButton';
+import GhostButton from '@/components/ui/GhostButton';
+import Chip from '@/components/ui/Chip';
 
 const STEPS = [
   {
