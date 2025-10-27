@@ -1,23 +1,23 @@
-import dynamic from "next/dynamic";
-import PageShell from "@/components/Layout/PageShell";
-import mapData from "@/data/map.json";
+import dynamic from 'next/dynamic';
+import { usePageHeading } from '@/components/Layout/PageShell';
+import mapData from '@/data/map.json';
 
-const Map = dynamic(() => import("@/components/Containers/MapContainer"), {
-  ssr: false
+const Map = dynamic(() => import('@/components/Containers/MapContainer'), {
+  ssr: false,
 });
 
+const PAGE_HEADING = {
+  emoji: 'dY-',
+  title: 'The Mirror Map: Drugs',
+  subtitle: 'Navigate the symbolic terrain of experimentation and meaning.',
+};
+
 export default function MapPage() {
+  usePageHeading(PAGE_HEADING);
+
   return (
-    <PageShell
-      heading={{
-        emoji: "🧭",
-        title: "The Mirror Map: Drugs",
-        subtitle: "Navigate the symbolic terrain of experimentation and meaning."
-      }}
-    >
-      <div className="mt-10">
-        <Map data={mapData} />
-      </div>
-    </PageShell>
+    <div className="mt-10">
+      <Map data={mapData} />
+    </div>
   );
 }

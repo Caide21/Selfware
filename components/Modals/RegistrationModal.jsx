@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { TextInput, TextAreaAuto } from '@/components/Form';
 
 export default function RegistrationModal({ isOpen, onClose, onSubmit }) {
   if (!isOpen) return null;
@@ -41,10 +42,8 @@ export default function RegistrationModal({ isOpen, onClose, onSubmit }) {
         <button className="absolute top-4 right-5 text-white text-xl" onClick={onClose}>×</button>
         <h2 className="text-xl sm:text-2xl font-bold mb-6">📜 Register Before Booking</h2>
         <form onSubmit={handleSubmit} className="space-y-4 text-sm">
-          <input name="name" type="text" placeholder="Your Name" required onChange={handleChange}
-            className="w-full p-3 rounded-xl bg-black/30 placeholder-white/60 border border-white/10" />
-          <input name="email" type="email" placeholder="Email Address" required onChange={handleChange}
-            className="w-full p-3 rounded-xl bg-black/30 placeholder-white/60 border border-white/10" />
+          <TextInput name="name" type="text" placeholder="Your Name" required onChange={handleChange} />
+          <TextInput name="email" type="email" placeholder="Email Address" required onChange={handleChange} />
           <select name="role" required onChange={handleChange}
             className="w-full p-3 rounded-xl bg-black/30 border border-white/10 text-white">
             <option value="">Your Role</option>
@@ -73,37 +72,13 @@ export default function RegistrationModal({ isOpen, onClose, onSubmit }) {
             </div>
           </fieldset>
 
-          <textarea
-            name="project"
-            rows={3}
-            placeholder="Describe your project or goal..."
-            onChange={handleChange}
-            className="w-full p-3 rounded-xl bg-black/30 placeholder-white/60 border border-white/10"
-          />
+          <TextAreaAuto name="project" placeholder="Describe your project or goal..." onChange={handleChange} maxRows={8} />
 
-          <input
-            name="phone"
-            type="tel"
-            placeholder="Phone Number (e.g. +27...)"
-            onChange={handleChange}
-            className="w-full p-3 rounded-xl bg-black/30 placeholder-white/60 border border-white/10"
-          />
+          <TextInput name="phone" type="tel" placeholder="Phone Number (e.g. +27...)" onChange={handleChange} />
 
-          <input
-            name="address"
-            type="text"
-            placeholder="Address (for invoice / records)"
-            onChange={handleChange}
-            className="w-full p-3 rounded-xl bg-black/30 placeholder-white/60 border border-white/10"
-          />
+          <TextInput name="address" type="text" placeholder="Address (for invoice / records)" onChange={handleChange} />
 
-          <input
-            name="vat_number"
-            type="text"
-            placeholder="VAT Number (optional)"
-            onChange={handleChange}
-            className="w-full p-3 rounded-xl bg-black/30 placeholder-white/60 border border-white/10"
-          />
+          <TextInput name="vat_number" type="text" placeholder="VAT Number (optional)" onChange={handleChange} />
 
           <button
             type="submit"

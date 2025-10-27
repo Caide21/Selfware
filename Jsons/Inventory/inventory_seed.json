@@ -1,0 +1,174 @@
+{
+  "schema": "inventory.unified.v1",
+  "inventory": [
+    {
+      "id": "4f6a42a7-8fc9-58fa-ac68-b5806071f756",
+      "name": "Eggs",
+      "kind": "food",
+      "qty": 6,
+      "stackable": true,
+      "location": "pantry",
+      "slot_cost": 0,
+      "tags": [
+        "common",
+        "nutrition",
+        "pre-shift"
+      ],
+      "notes": "Simple protein before shift."
+    },
+    {
+      "id": "9b7e0d5f-b7e0-5f73-bb9c-9cf15e7420dc",
+      "name": "Date balls",
+      "kind": "food",
+      "qty": 6,
+      "stackable": true,
+      "location": "pantry",
+      "slot_cost": 0,
+      "tags": [
+        "energy",
+        "snack"
+      ],
+      "notes": "1 every 60–90m during shift."
+    },
+    {
+      "id": "1100ef13-5a8f-53fe-955f-61932d4b1167",
+      "name": "Amfexa 5mg",
+      "kind": "med",
+      "qty": 6,
+      "stackable": true,
+      "location": "meds",
+      "slot_cost": 0,
+      "tags": [
+        "stimulant",
+        "guardrails"
+      ],
+      "notes": "With food; redose ≥3h later only if needed."
+    },
+    {
+      "id": "41f6ada0-1826-5154-b4bc-14e6ff535eef",
+      "name": "Nicotine gum",
+      "kind": "med",
+      "qty": 10,
+      "stackable": true,
+      "location": "meds",
+      "slot_cost": 0,
+      "tags": [
+        "stimulant",
+        "limit"
+      ],
+      "notes": "Use controlled; consider water when chewing."
+    },
+    {
+      "id": "dee74f82-1c8d-5b4d-8c8d-4dca38c83d47",
+      "name": "Notepad",
+      "kind": "tool",
+      "qty": 1,
+      "stackable": false,
+      "location": "closet",
+      "slot_cost": 1,
+      "equip_slot": "utility",
+      "tags": [
+        "gear",
+        "common"
+      ]
+    },
+    {
+      "id": "e19e61be-a6be-5ee9-a016-53ac12b3c3e8",
+      "name": "Pen",
+      "kind": "tool",
+      "qty": 1,
+      "stackable": false,
+      "location": "closet",
+      "slot_cost": 1,
+      "equip_slot": "utility",
+      "tags": [
+        "gear",
+        "common"
+      ]
+    },
+    {
+      "id": "ca7feb56-3873-5f18-a906-8c81d6974e0f",
+      "name": "Bottle opener",
+      "kind": "tool",
+      "qty": 1,
+      "stackable": false,
+      "location": "closet",
+      "slot_cost": 1,
+      "equip_slot": "utility",
+      "tags": [
+        "gear",
+        "common"
+      ]
+    },
+    {
+      "id": "05d6d05e-2325-5259-816f-6472c7b35c77",
+      "name": "Reset Breath",
+      "kind": "ritual",
+      "qty": 1,
+      "stackable": false,
+      "location": "mind",
+      "slot_cost": 0,
+      "tags": [
+        "breathing",
+        "recovery",
+        "heroic"
+      ],
+      "effect": {
+        "type": "calm",
+        "duration": "2m"
+      },
+      "notes": "Double inhale • long exhale."
+    },
+    {
+      "id": "7eca66a4-258c-54ec-9fce-6da1e4f7b479",
+      "name": "Shift Primer Walk",
+      "kind": "ritual",
+      "qty": 1,
+      "stackable": false,
+      "location": "mind",
+      "slot_cost": 0,
+      "tags": [
+        "flow",
+        "rare"
+      ],
+      "effect": {
+        "type": "flow",
+        "duration": "5m"
+      },
+      "notes": "Music + brisk walk before work."
+    },
+    {
+      "id": "530ca386-a5b4-5f71-8298-c120ce882f2c",
+      "name": "Weed nightly (low-THC)",
+      "kind": "med",
+      "qty": 1,
+      "stackable": false,
+      "location": "meds",
+      "slot_cost": 0,
+      "tags": [
+        "downshift",
+        "night",
+        "guardrails"
+      ],
+      "notes": "~3h before bed; skip if sleep debt high."
+    },
+    {
+      "id": "1c35b691-0c66-42a5-933c-06aa1c41310f",
+      "name": "Selfware Card",
+      "kind": "tool",
+      "qty": 1,
+      "stackable": false,
+      "location": "wallet",
+      "slot_cost": 0,
+      "equip_slot": "utility",
+      "tags": ["identity", "access", "gear"],
+      "notes": "Contact/identity card linking to the Selfware portal."
+    }
+  ],
+  "settings": {
+    "defaults": {
+      "pockets": 6,
+      "backpack": 18
+    }
+  }
+}

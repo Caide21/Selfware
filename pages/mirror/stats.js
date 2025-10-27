@@ -1,19 +1,19 @@
-import React from "react";
-import PageShell from "@/components/Layout/PageShell";
-import StatMap from "@/components/Mirror/StatMap";
+import React from 'react';
+import { usePageHeading } from '@/components/Layout/PageShell';
+import StatMap from '@/components/Mirror/StatMap';
+
+const PAGE_HEADING = {
+  emoji: 'dY�z',
+  title: 'The Mirror: Stat Sheet',
+  subtitle: 'Track, reflect, and measure your state in real-time.',
+};
 
 export default function StatsPage() {
+  usePageHeading(PAGE_HEADING);
+
   return (
-    <PageShell
-      heading={{
-        emoji: "🪞",
-        title: "The Mirror: Stat Sheet",
-        subtitle: "Track, reflect, and measure your state in real-time."
-      }}
-    >
-      <div className="max-w-5xl mx-auto px-4">
-        <StatMap />
-      </div>
-    </PageShell>
+    <div className="mx-auto max-w-5xl px-4">
+      <StatMap />
+    </div>
   );
 }

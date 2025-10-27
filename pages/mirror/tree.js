@@ -1,19 +1,19 @@
-import React from "react";
-import PageShell from "@/components/Layout/PageShell";
-import SkillMap from "@/components/Mirror/SkillMap";
+import React from 'react';
+import { usePageHeading } from '@/components/Layout/PageShell';
+import SkillMap from '@/components/Mirror/SkillMap';
+
+const PAGE_HEADING = {
+  emoji: 'dYO3',
+  title: 'Skill Tree',
+  subtitle: 'Evolving abilities, visualized and nurtured. Watch your patterns grow.',
+};
 
 export default function SkillTreePage() {
+  usePageHeading(PAGE_HEADING);
+
   return (
-    <PageShell
-      heading={{
-        emoji: "🌳",
-        title: "Skill Tree",
-        subtitle: "Evolving abilities, visualized and nurtured. Watch your patterns grow."
-      }}
-    >
-      <div className="max-w-6xl mx-auto px-4">
-        <SkillMap />
-      </div>
-    </PageShell>
+    <div className="max-w-6xl mx-auto px-4">
+      <SkillMap />
+    </div>
   );
 }

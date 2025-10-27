@@ -1,0 +1,27 @@
+{
+    "attributes": [
+      { "name": "mental clarity",    "value": 53, "scale": "0-100", "notes": "not bad but low on sleep, boosted by caffeine, nicotine, music and amfexa", "tags": ["caffeine","low-sleep"] },
+      { "name": "emotional energy",  "value": 52, "scale": "0-100", "notes": "steady but reserved" },
+      { "name": "physical vitality", "value": 61, "scale": "0-100", "notes": "walk + hydration helped" },
+      { "name": "social presence",   "value": 70, "scale": "0-100", "notes": "Becoming more social as time continues due to waitering and the skills i am learning in the hosplity industry" }
+    ],
+    "conditions": [
+      { "name": "flow",         "value": "active",   "kind": "buff",   "notes": "coding groove after warmup", "tags": ["deep-work"] },
+      { "name": "inspiration",  "value": "medium",   "kind": "buff" },
+      { "name": "focus",        "value": "boosted",  "kind": "buff",   "notes": "date balls + redbull + nicotine" },
+      { "name": "fatigue",      "value": "medium",   "kind": "debuff", "notes": "short sleep" },
+      { "name": "stress",       "value": "low",      "kind": "debuff" },
+      { "name": "distraction",  "value": "high",     "kind": "debuff", "notes": "phone pings" }
+    ],
+    "vitals": [
+      { "name": "energy",      "value": 40, "scale": "0-100", "notes": "low; stimulants compensating" },
+      { "name": "health",      "value": 82, "scale": "0-100", "notes": "overall good" },
+      { "name": "resilience",  "value": 65, "scale": "0-100" },
+      { "name": "willpower",   "value": 54, "scale": "0-100", "notes": "adequate with structure" },
+  
+      { "name": "mood",        "value": 40, "scale": "0-100", "notes": "calm, mildly positive" },
+      { "name": "hrv",         "value": 58, "scale": "ms",    "notes": "manual entry" },
+      { "name": "sleep debt",  "value": 1.5, "scale": "hours", "notes": "owes ~15h" }
+    ]
+  }
+  

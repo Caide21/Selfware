@@ -1,43 +1,92 @@
-import Link from "next/link";
-import { notion } from "../lib/notion";
-import PageShell from "@/components/Layout/PageShell";
+﻿import Link from 'next/link';
+import Head from 'next/head';
+import { usePageHeading } from '@/components/Layout/PageShell';
+import { fetchCodexIndexFromNotion } from '../lib/notion';
+import { syncCodexIndexToSupabase } from '../lib/codexSync';
+import { supabase } from '../lib/supabaseClient';
 
-export default function CodexPage({ codexEntries }) {
+const PAGE_HEADING = {
+  emoji: 'dY�',
+  title: 'The Codex',
+  subtitle: 'Browse symbolic scrolls, operating principles, and reference entries.',
+};
+
+const isCodexDebug = process.env.CODEx_DEBUG === '1';
+const showSyncButton = process.env.NODE_ENV !== 'production' || isCodexDebug;
+
+export default function CodexPage({ codex, error }) {
+  usePageHeading(PAGE_HEADING);
+
   return (
-    <PageShell
-      heading={{
-        emoji: "📜",
-        title: "The Codex",
-        subtitle: "Core beliefs, operating principles, and the grammar of The Mirror OS.",
-      }}
-    >
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 px-2 sm:px-0 max-w-6xl mx-auto">
-        {codexEntries.map(({ title, slug, description, symbol }) => (
-          <Link key={slug} href={`/${slug}`}>
-            <div className="bg-white/10 border border-white/10 rounded-xl p-6 hover:bg-white/20 transition">
-              <h2 className="text-xl font-semibold mb-2">
-                {symbol} {title}
+    <>
+      <Head>
+        <meta name="theme-color" content="#FFFFFF" />
+      </Head>
+      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 px-2 sm:px-0 lg:grid-cols-3">
+        {error ? (
+          <p className="col-span-full text-center text-sm text-tertiary">
+            Unable to load Codex entries right now.
+          </p>
+        ) : (
+          codex.map(({ title, slug, description, symbol }) => (
+            <Link key={slug} href={`/${slug}`} className="rounded-xl border border-slate-200 bg-white p-6 text-left shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
+              <h2 className="text-xl font-semibold text-text">
+                {symbol ? `${symbol} ` : ''}
+                {title}
               </h2>
-              <p className="text-sm text-white/70">{description}</p>
-            </div>
-          </Link>
-        ))}
+              {description ? (
+                <p className="mt-3 text-sm text-text-muted">{description}</p>
+              ) : (
+                <p className="mt-3 text-sm italic text-text-muted">No description yet.</p>
+              )}
+            </Link>
+          ))
+        )}
       </div>
-    </PageShell>
+
+      {showSyncButton ? (
+        <div className="mx-auto mt-6 max-w-6xl px-2 sm:px-0">
+          <button
+            className="inline-flex items-center rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-text transition hover:border-primary/50 hover:text-primary"
+            onClick={async () => {
+              try {
+                const response = await fetch('/api/codex/sync', { method: 'POST' });
+                const summary = await response.json();
+                if (isCodexDebug) console.log('Codex sync:', summary);
+                if (summary.ok) {
+                  window.location.reload();
+                }
+              } catch (err) {
+                if (isCodexDebug) console.error('Codex sync error', err);
+              }
+            }}
+          >
+            Sync Codex
+          </button>
+        </div>
+      ) : null}
+    </>
   );
 }
 
 export async function getServerSideProps() {
-  const response = await notion.databases.query({
-    database_id: process.env.NOTION_CODEX_REPOSITORY_ID,
-  });
+  const debug = process.env.CODEx_DEBUG === '1';
 
-  const codexEntries = response.results.map((page) => ({
-    title: page.properties.Name?.title?.[0]?.plain_text || "Untitled",
-    slug: page.properties.Slug?.rich_text?.[0]?.plain_text || "",
-    description: page.properties.Description?.rich_text?.[0]?.plain_text || "",
-    symbol: page.properties.Symbol?.rich_text?.[0]?.plain_text || "",
-  }));
+  try {
+    const notionEntries = await fetchCodexIndexFromNotion();
+    await syncCodexIndexToSupabase({ entries: notionEntries, userId: null });
 
-  return { props: { codexEntries } };
+    const { data, error } = await supabase
+      .from('codex_entries')
+      .select('title, slug, symbol, description')
+      .is('user_id', null)
+      .order('title', { ascending: true });
+
+    if (error) throw error;
+
+    return { props: { codex: data || [] } };
+  } catch (err) {
+    if (debug) console.error('[Codex SSR] Error:', err);
+    return { props: { codex: [], error: true } };
+  }
 }

@@ -1,19 +1,19 @@
-import React from "react";
-import PageShell from "@/components/Layout/PageShell";
-import EmotionMap from "@/components/Mirror/EmotionMap";
+import React from 'react';
+import { usePageHeading } from '@/components/Layout/PageShell';
+import EmotionMap from '@/components/Mirror/EmotionMap';
+
+const PAGE_HEADING = {
+  emoji: 'dY�?',
+  title: 'Emotional State Tracker',
+  subtitle: 'A mirror for your inner weather. Observe, don’t judge.',
+};
 
 export default function EmotionPage() {
+  usePageHeading(PAGE_HEADING);
+
   return (
-    <PageShell
-      heading={{
-        emoji: "🫀",
-        title: "Emotional State Tracker",
-        subtitle: "A mirror for your inner weather. Observe, don’t judge."
-      }}
-    >
-      <div className="max-w-4xl mx-auto px-4">
-        <EmotionMap />
-      </div>
-    </PageShell>
+    <div className="mx-auto max-w-4xl px-4">
+      <EmotionMap />
+    </div>
   );
 }

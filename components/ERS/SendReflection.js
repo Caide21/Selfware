@@ -1,5 +1,6 @@
 // components/SendReflection.js
 import { useState } from "react";
+import { TextAreaAuto } from '@/components/Form';
 
 export default function SendReflection() {
   const [message, setMessage] = useState("");
@@ -19,12 +20,11 @@ export default function SendReflection() {
 
   return (
     <div className="bg-white/10 backdrop-blur-md p-6 rounded-xl border border-white/20 shadow-xl space-y-4">
-      <textarea
-        className="w-full p-4 text-white bg-black/30 rounded-md border border-white/10 focus:outline-none focus:ring-2 focus:ring-indigo-400"
+      <TextAreaAuto
         placeholder="Write your reflection..."
         value={message}
         onChange={(e) => setMessage(e.target.value)}
-        rows={5}
+        maxRows={12}
       />
       <button
         onClick={sendToBackend}

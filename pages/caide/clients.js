@@ -1,7 +1,10 @@
-import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabase";
-import { useRouter } from "next/router";
-import Head from "next/head";
+﻿import { useEffect, useState } from "react";
+import { TextInput, TextAreaAuto } from '@/components/Form';
+import { supabase } from '@/lib/supabase';
+import { useRouter } from 'next/router';
+import Head from 'next/head';
+
+const STATUS_OPTIONS = ['pending', 'booked', 'paid', 'complete'];
 
 export default function ClientDashboard() {
   const [clients, setClients] = useState([]);
@@ -13,22 +16,22 @@ export default function ClientDashboard() {
   useEffect(() => {
     const init = async () => {
       const {
-        data: { session }
+        data: { session },
       } = await supabase.auth.getSession();
 
       if (!session?.user) {
-        router.push("/join/login");
+        router.push('/join/login');
         return;
       }
 
       const userId = session.user.id;
       const { data, error } = await supabase
-        .from("users")
-        .select("role")
-        .eq("id", userId)
+        .from('users')
+        .select('role')
+        .eq('id', userId)
         .single();
 
-      if (error || !data || data.role !== "admin") {
+      if (error || !data || data.role !== 'admin') {
         setAuthChecked(true);
         setIsAdmin(false);
         return;
@@ -40,16 +43,19 @@ export default function ClientDashboard() {
     };
 
     init();
-  }, []);
+  }, [router]);
 
   const fetchClients = async () => {
     const { data, error } = await supabase
-      .from("registrations")
-      .select("*")
-      .order("created_at", { ascending: false });
+      .from('registrations')
+      .select('*')
+      .order('created_at', { ascending: false });
 
-    if (error) console.error("Error fetching clients:", error);
-    else setClients(data);
+    if (error) {
+      console.error('Error fetching clients:', error);
+    } else {
+      setClients(data);
+    }
   };
 
   const uniqueClients = Object.values(
@@ -62,7 +68,7 @@ export default function ClientDashboard() {
   const handleEditToggle = (email) => {
     setEditing((prev) => ({
       ...prev,
-      [email]: !prev[email]
+      [email]: !prev[email],
     }));
   };
 
@@ -76,17 +82,17 @@ export default function ClientDashboard() {
 
   const handleSave = async (client) => {
     const { error } = await supabase
-      .from("registrations")
+      .from('registrations')
       .update({
         notion_link: client.notion_link,
         status: client.status,
-        notes: client.notes
+        notes: client.notes,
       })
-      .eq("email", client.email);
+      .eq('email', client.email);
 
     if (error) {
-      alert("Failed to save. Check console.");
-      console.error("Update error:", error);
+      alert('Failed to save. Check console.');
+      console.error('Update error:', error);
     } else {
       setEditing((prev) => ({ ...prev, [client.email]: false }));
     }
@@ -94,19 +100,19 @@ export default function ClientDashboard() {
 
   if (!authChecked) {
     return (
-      <main className="bg-black text-white min-h-screen flex items-center justify-center">
-        <p className="text-theme-muted">Checking access...</p>
+      <main className="flex min-h-screen items-center justify-center text-text">
+        <p className="text-text-muted">Checking access...</p>
       </main>
     );
   }
 
   if (!isAdmin) {
     return (
-      <main className="bg-black text-white min-h-screen flex items-center justify-center text-center px-6">
+      <main className="flex min-h-screen items-center justify-center px-6 text-center text-text">
         <div>
-          <div className="text-4xl mb-2">⛔</div>
+          <div className="mb-2 text-4xl">⚠️</div>
           <p className="text-lg font-medium">Access Denied</p>
-          <p className="text-sm text-theme-muted">Only authorized users can view this page.</p>
+          <p className="text-sm text-text-muted">Only authorized users can view this page.</p>
         </div>
       </main>
     );
@@ -114,9 +120,11 @@ export default function ClientDashboard() {
 
   return (
     <>
-      <Head><title>Client Codex | Selfware</title></Head>
-      <main className="min-h-screen bg-black text-white px-4 sm:px-6 pt-20 pb-12 font-sans overflow-x-auto">
-        <h1 className="text-3xl font-bold mb-8 border-b border-white/10 pb-2">📓 Client Dashboard</h1>
+      <Head>
+        <title>Client Codex | Selfware</title>
+      </Head>
+      <main className="min-h-screen px-4 pt-20 pb-12 text-text sm:px-6">
+        <h1 className="mb-8 text-3xl font-semibold">Client Dashboard</h1>
 
         <div className="grid gap-6">
           {uniqueClients.map((client) => {
@@ -124,92 +132,91 @@ export default function ClientDashboard() {
             return (
               <div
                 key={client.email}
-                className="theme-card p-4 rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm space-y-2"
+                className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
               >
-                <div className="flex justify-between items-start">
+                <div className="flex items-start justify-between">
                   <div>
-                    <div className="text-xl font-semibold">{client.name}</div>
-                    <div className="text-sm text-theme-muted">{client.email}</div>
-                    <div className="text-sm text-theme-muted">({client.role})</div>
+                    <div className="text-xl font-semibold text-text">{client.name}</div>
+                    <div className="text-sm text-text-muted">{client.email}</div>
+                    <div className="text-sm text-text-muted">({client.role})</div>
                   </div>
                   <button
                     onClick={() => handleEditToggle(client.email)}
-                    className="text-sm underline hover:opacity-80"
+                    className="text-sm font-medium text-info underline hover:opacity-80"
                   >
-                    {isEditing ? "Cancel" : "Edit"}
+                    {isEditing ? 'Cancel' : 'Edit'}
                   </button>
                 </div>
 
                 {isEditing ? (
-                  <div className="space-y-2 text-sm">
+                  <div className="space-y-3 text-sm text-text">
                     <div>
-                      <label className="block mb-1">Notion Link</label>
-                      <input
-                        type="text"
-                        value={client.notion_link || ""}
-                        onChange={(e) =>
-                          handleChange(client.email, "notion_link", e.target.value)
-                        }
-                        className="w-full p-2 rounded bg-black/20 border border-white/10 text-white"
+                      <label className="mb-1 block">Notion Link</label>
+                      <TextInput
+                        value={client.notion_link || ''}
+                        onChange={(e) => handleChange(client.email, 'notion_link', e.target.value)}
                       />
                     </div>
                     <div>
-                      <label className="block mb-1">Status</label>
+                      <label className="mb-1 block">Status</label>
                       <select
-                        value={client.status || "pending"}
-                        onChange={(e) =>
-                          handleChange(client.email, "status", e.target.value)
-                        }
-                        className="w-full p-2 rounded bg-black/20 border border-white/10 text-white"
+                        value={client.status || 'pending'}
+                        onChange={(e) => handleChange(client.email, 'status', e.target.value)}
+                        className="w-full rounded border border-slate-300 bg-white px-3 py-2 text-sm text-text focus:outline-none focus:ring-2 focus:ring-primary/40"
                       >
-                        <option value="pending">Pending</option>
-                        <option value="booked">Booked</option>
-                        <option value="paid">Paid</option>
-                        <option value="complete">Complete</option>
+                        {STATUS_OPTIONS.map((option) => (
+                          <option key={option} value={option}>
+                            {option.charAt(0).toUpperCase() + option.slice(1)}
+                          </option>
+                        ))}
                       </select>
                     </div>
                     <div>
-                      <label className="block mb-1">Notes</label>
-                      <textarea
-                        rows={3}
-                        value={client.notes || ""}
-                        onChange={(e) =>
-                          handleChange(client.email, "notes", e.target.value)
-                        }
-                        className="w-full p-2 rounded bg-black/20 border border-white/10 text-white"
+                      <label className="mb-1 block">Notes</label>
+                      <TextAreaAuto
+                        value={client.notes || ''}
+                        onChange={(e) => handleChange(client.email, 'notes', e.target.value)}
+                        maxRows={8}
                       />
                     </div>
                     <button
                       onClick={() => handleSave(client)}
-                      className="bg-white text-black font-medium px-4 py-2 rounded hover:bg-gray-200 transition"
+                      className="inline-flex items-center rounded-full bg-cta-accent px-4 py-2 text-sm font-semibold text-white shadow-md transition hover:shadow-lg hover:brightness-110"
                     >
                       Save Changes
                     </button>
                   </div>
                 ) : (
-                  <div className="text-sm space-y-1">
-                    <div><strong>Focus:</strong> {client.focus_areas?.join(", ")}</div>
-                    <div><strong>Project:</strong> {client.project || "—"}</div>
-                    {client.notion_link && (
+                  <div className="space-y-1 text-sm text-text-muted">
+                    <div>
+                      <strong>Focus:</strong> {client.focus_areas?.join(', ')}
+                    </div>
+                    <div>
+                      <strong>Project:</strong> {client.project || '—'}
+                    </div>
+                    {client.notion_link ? (
                       <div>
-                        <strong>Notion:</strong>{" "}
-                        <a href={client.notion_link} target="_blank" rel="noopener noreferrer" className="underline text-blue-400">
+                        <strong>Notion:</strong>{' '}
+                        <a
+                          href={client.notion_link}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="font-medium text-info underline"
+                        >
                           View
                         </a>
                       </div>
-                    )}
-                    {client.status && (
-                      <div><strong>Status:</strong> {client.status}</div>
-                    )}
-                    {client.notes && (
-                      <div><strong>Notes:</strong> {client.notes}</div>
-                    )}
-                    {/* <button
-                      onClick={() => resendInvoice(client)}
-                      className="mt-2 underline text-blue-400 text-sm hover:opacity-80"
-                    >
-                      📤 Resend Invoice
-                    </button> */}
+                    ) : null}
+                    {client.status ? (
+                      <div>
+                        <strong>Status:</strong> {client.status}
+                      </div>
+                    ) : null}
+                    {client.notes ? (
+                      <div>
+                        <strong>Notes:</strong> {client.notes}
+                      </div>
+                    ) : null}
                   </div>
                 )}
               </div>

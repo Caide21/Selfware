@@ -1,6 +1,6 @@
 // pages/sandbox.js
 import { useMemo, useRef, useState } from 'react';
-import PageShell from '@/components/Layout/PageShell';
+import { usePageHeading } from '@/components/Layout/PageShell';
 import SectionHeading from '@/components/SectionHeading';
 import InfiniteCanvas from '@/components/Canvas/InfiniteCanvas';
 import BookCard from '@/components/Cards/BookCard';
@@ -9,19 +9,25 @@ const FALLBACK_IMG = '/neural-web.png';
 
 // Demo placeholders for the "Grammar" deck
 const PLACEHOLDERS = [
-  { id: 'focus',  title: 'Scroll of Focus',  cover: FALLBACK_IMG },
+  { id: 'focus', title: 'Scroll of Focus', cover: FALLBACK_IMG },
   { id: 'breath', title: 'Ritual of Breath', cover: FALLBACK_IMG },
-  { id: 'map',    title: 'Map of Mirrors',   cover: FALLBACK_IMG },
-  { id: 'echo',   title: 'Doctrine of Echo', cover: FALLBACK_IMG },
-  { id: 'fog',    title: 'On Fog & Clarity', cover: FALLBACK_IMG },
+  { id: 'map', title: 'Map of Mirrors', cover: FALLBACK_IMG },
+  { id: 'echo', title: 'Doctrine of Echo', cover: FALLBACK_IMG },
+  { id: 'fog', title: 'On Fog & Clarity', cover: FALLBACK_IMG },
 ];
 
 // Demo placeholders for the "Beliefs" deck
 const BELIEFS = [
   { id: 'truth', title: 'On First Principles', cover: FALLBACK_IMG },
-  { id: 'ethic', title: 'Ethics of Building',  cover: FALLBACK_IMG },
-  { id: 'aim',   title: 'Aim & Telos',         cover: FALLBACK_IMG },
+  { id: 'ethic', title: 'Ethics of Building', cover: FALLBACK_IMG },
+  { id: 'aim', title: 'Aim & Telos', cover: FALLBACK_IMG },
 ];
+
+const PAGE_HEADING = {
+  emoji: "dY�",
+  title: 'Sandbox',
+  subtitle: 'Hover a stack and use �+? / �+\' (or scroll) to flip cards. Drag to move, wheel outside to zoom.',
+};
 
 export default function Sandbox() {
   // Two canvas nodes: left "Grammar" and right "Beliefs"
@@ -47,32 +53,25 @@ export default function Sandbox() {
     []
   );
 
+  usePageHeading(PAGE_HEADING);
+
   return (
-    <PageShell
-      heading={{
-        emoji: "🧪",
-        title: "Sandbox",
-        subtitle: "Hover a stack and use ← / → (or scroll) to flip cards. Drag to move, wheel outside to zoom.",
-      }}
-    >
-      <main className="min-h-screen px-6 pb-10 text-white">
+    <main className="min-h-screen px-6 pb-10 text-text">
+      <SectionHeading title="Infinite Canvas" subtitle="Two draggable stacks with keyboard nav" />
 
-        <SectionHeading title="Infinite Canvas" subtitle="Two draggable stacks with keyboard nav" />
-
-        <InfiniteCanvas
-          initialNodes={nodes}
-          renderNode={(n) => (
-            <div className="flex flex-col items-center">
-              <h2 className="text-xl font-bold mb-4">{n.payload.title}</h2>
-              <CardStack items={n.payload.items} />
-            </div>
-          )}
-          onNodesChange={() => {}}
-          gridSize={48}
-          snapToGrid
-        />
-      </main>
-    </PageShell>
+      <InfiniteCanvas
+        initialNodes={nodes}
+        renderNode={(n) => (
+          <div className="flex flex-col items-center">
+            <h2 className="text-xl font-bold mb-4">{n.payload.title}</h2>
+            <CardStack items={n.payload.items} />
+          </div>
+        )}
+        onNodesChange={() => {}}
+        gridSize={48}
+        snapToGrid
+      />
+    </main>
   );
 }
 
@@ -93,7 +92,7 @@ function CardStack({ items = [] }) {
     if (e.key === 'End') setIndex(items.length - 1);
   };
   const onWheel = (e) => {
-    e.stopPropagation(); // don’t zoom the canvas while flipping
+    e.stopPropagation(); // don�?Tt zoom the canvas while flipping
     if (!items.length) return;
     setIndex((i) => wrap(i + (e.deltaY > 0 ? 1 : -1)));
   };
@@ -101,10 +100,10 @@ function CardStack({ items = [] }) {
   // Visual params
   const cardW = 560;
   const cardH = 260;
-  const overlapX = 68;     // horizontal overlap between cards
+  const overlapX = 68; // horizontal overlap between cards
   const depthScale = 0.05; // shrink per step away from active
-  const liftY = 10;        // slight lift for active card
-  const fanDeg = 1.6;      // tiny rotation per step
+  const liftY = 10; // slight lift for active card
+  const fanDeg = 1.6; // tiny rotation per step
   const hud = items.length ? `${index + 1} / ${items.length}` : '0 / 0';
 
   return (
@@ -116,19 +115,19 @@ function CardStack({ items = [] }) {
       onWheel={onWheel}
       className="relative outline-none select-none"
       style={{ width: cardW + 2 * overlapX, height: cardH + 48 }}
-      title="Hover and use ← / → to flip cards"
+      title="Hover and use �+? / �+' to flip cards"
     >
       {/* stacked cards */}
       <div className="absolute left-0 top-0 perspective-[1200px]">
         {items.map((it, i) => {
-          const d = i - index;               // distance from active card
+          const d = i - index; // distance from active card
           const abs = Math.abs(d);
           const scale = 1 - abs * depthScale;
-          const xBase = i * overlapX;        // baseline stagger
+          const xBase = i * overlapX; // baseline stagger
           const translateX = xBase - index * overlapX; // keep active centered-ish
           const translateY = d === 0 ? -liftY : 0;
           const rotateZ = d * fanDeg;
-          const z = 1000 - abs;              // ensure active is on top
+          const z = 1000 - abs; // ensure active is on top
 
           return (
             <div

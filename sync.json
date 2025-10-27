@@ -155,7 +155,7 @@
     {
       "dir": "pages/mirror",
       "files": [
-        "emotion.js", "fetch.js", "index.js",
+        "emotion.js", "fetch.js",
         "interface.js", "map.js", "scroll.js",
         "spellbook.js", "stats.js", "tree.js"
       ]

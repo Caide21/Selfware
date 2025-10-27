@@ -1,6 +1,7 @@
+import { useMemo } from 'react';
 import { Client } from '@notionhq/client';
 import SmartRenderer from '@/components/SmartRenderer';
-import PageShell from '@/components/Layout/PageShell';
+import { usePageHeading } from '@/components/Layout/PageShell';
 
 export async function getServerSideProps({ params }) {
   const notion = new Client({ auth: process.env.NOTION_TOKEN });
@@ -45,21 +46,24 @@ export async function getServerSideProps({ params }) {
 }
 
 export default function SlugPage({ page, blocks }) {
-  const title = page.properties?.Name?.title?.[0]?.plain_text ?? "Untitled";
-  const emoji = page.properties?.Symbol?.rich_text?.[0]?.plain_text ?? "📄";
-  const subtitle = page.properties?.Description?.rich_text?.[0]?.plain_text ?? "";
+  const title = page.properties?.Name?.title?.[0]?.plain_text ?? 'Untitled';
+  const emoji = page.properties?.Symbol?.rich_text?.[0]?.plain_text ?? 'dY","';
+  const subtitle = page.properties?.Description?.rich_text?.[0]?.plain_text ?? '';
+
+  const heading = useMemo(
+    () => ({
+      emoji,
+      title,
+      subtitle,
+    }),
+    [emoji, title, subtitle]
+  );
+
+  usePageHeading(heading);
 
   return (
-    <PageShell
-      heading={{
-        emoji,
-        title,
-        subtitle,
-      }}
-    >
-      <div className="max-w-3xl mx-auto px-4">
-        <SmartRenderer page={page} blocks={blocks} mode="detail" />
-      </div>
-    </PageShell>
+    <div className="max-w-3xl mx-auto px-4">
+      <SmartRenderer page={page} blocks={blocks} mode="detail" />
+    </div>
   );
 }

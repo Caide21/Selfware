@@ -1,15 +1,17 @@
 export default function PageHeading({ emoji, title, subtitle }) {
+  if (!emoji && !title && !subtitle) return null;
+
   return (
-    <section className="pt-32 pb-20 px-4 sm:px-6 text-center">
-      <h1 className="text-3xl sm:text-4xl font-bold mb-4 flex justify-center items-center gap-2">
+    <section className="text-center space-y-3">
+      <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight flex justify-center items-center gap-2 text-text pp-text">
         {emoji && <span className="text-4xl">{emoji}</span>}
         {title}
       </h1>
-      {subtitle && (
-        <p className="text-theme-muted max-w-2xl mx-auto text-base sm:text-lg">
+      {subtitle ? (
+        <p className="mx-auto max-w-2xl text-base sm:text-lg text-text-muted pp-muted">
           {subtitle}
         </p>
-      )}
+      ) : null}
     </section>
   );
 }

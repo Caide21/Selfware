@@ -1,54 +1,77 @@
-import PageShell from "@/components/Layout/PageShell";
+import { usePageHeading } from '@/components/Layout/PageShell';
 import Link from 'next/link';
 
+const PAGE_HEADING = {
+  emoji: "dY�",
+  title: 'Case Scrolls',
+  subtitle:
+    'These are not just projects\u2014they\u2019re symbolic artifacts. Each scroll tells a story of systems built with soul.',
+};
+
+const caseStudies = [
+  {
+    title: 'dYO? NexMind Interface',
+    copy:
+      'A modular symbolic framework for cognitive mirrors. Scroll-driven UX with Tailwind and AI tooling.',
+    link: { href: 'https://github.com/Caide21/ProjectAether', label: 'View Repo', external: true },
+  },
+  {
+    title: 'dYOO 3D Scroll Corridor',
+    copy:
+      'A spatial landing experience: DOM meets R3F. Scrolls, fog, and floating rituals in a corridor of resonance.',
+    link: { href: '/codex', label: 'Enter Corridor' },
+  },
+  {
+    title: 'dY"r Resonance Engine',
+    copy:
+      'In progress: a live reflection tool that reads emotion and mirrors user states through symbolic UI effects.',
+    footnote: 'Coming soon…',
+  },
+  {
+    title: 'dY>� Freelance Portal',
+    copy: 'This site\u2014modular, expressive, symbolic. Crafted to invite resonance-aligned collaborators.',
+    link: { href: '/home', label: 'View Landing' },
+  },
+];
+
 export default function Work() {
+  usePageHeading(PAGE_HEADING);
+
   return (
-    <PageShell
-      heading={{
-        emoji: "🧱",
-        title: "Case Scrolls",
-        subtitle: "These are not just projects — they are symbolic artifacts. Each scroll tells a story of systems built with soul.",
-      }}
-    >
-      <section className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-10 max-w-5xl mx-auto">
-        <div className="bg-white/5 p-6 rounded-2xl border border-white/10 backdrop-blur-sm hover:bg-white/10 transition">
-          <h2 className="text-xl font-semibold mb-2">🌀 NexMind Interface</h2>
-          <p className="text-sm text-theme-muted">
-            A modular symbolic framework for cognitive mirrors. Scroll-driven UX. Tailwind + AI-enhanced architecture.
-          </p>
-          <a href="https://github.com/Caide21/ProjectAether" className="text-purple-400 underline mt-2 inline-block" target="_blank" rel="noopener noreferrer">
-            View Repo →
-          </a>
-        </div>
-
-        <div className="bg-white/5 p-6 rounded-2xl border border-white/10 backdrop-blur-sm hover:bg-white/10 transition">
-          <h2 className="text-xl font-semibold mb-2">🌌 3D Scroll Corridor</h2>
-          <p className="text-sm text-theme-muted">
-            A fully spatial landing page experience. DOM + R3F hybrid. Scrolls, fog, and floating rituals in a corridor of resonance.
-          </p>
-          <a href="/codex" className="text-purple-400 underline mt-2 inline-block">
-            Enter Corridor →
-          </a>
-        </div>
-
-        <div className="bg-white/5 p-6 rounded-2xl border border-white/10 backdrop-blur-sm hover:bg-white/10 transition">
-          <h2 className="text-xl font-semibold mb-2">🔮 Resonance Engine</h2>
-          <p className="text-sm text-theme-muted">
-            In progress: a live reflection tool that reads emotion and mirrors user states through symbolic UI effects.
-          </p>
-          <span className="text-white/50 italic text-sm">Coming soon...</span>
-        </div>
-
-        <div className="bg-white/5 p-6 rounded-2xl border border-white/10 backdrop-blur-sm hover:bg-white/10 transition">
-          <h2 className="text-xl font-semibold mb-2">🛠 Freelance Portal</h2>
-          <p className="text-sm text-theme-muted">
-            This very site — modular, expressive, symbolic. Tailored to invite resonance-aligned collaborators.
-          </p>
-          <Link href="/home" className="text-purple-400 underline mt-2 inline-block">
-            View Landing →
-          </Link>
-        </div>
-      </section>
-    </PageShell>
+    <section className="mx-auto mt-12 grid max-w-5xl grid-cols-1 gap-10 px-4 md:grid-cols-2">
+      {caseStudies.map((item) => (
+        <article
+          key={item.title}
+          className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
+        >
+          <h2 className="text-lg font-semibold text-text">{item.title}</h2>
+          <p className="mt-3 text-sm text-text-muted">{item.copy}</p>
+          {item.link ? (
+            item.link.external ? (
+              <a
+                href={item.link.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-info hover:underline"
+              >
+                {item.link.label}
+                <span aria-hidden>↗</span>
+              </a>
+            ) : (
+              <Link
+                href={item.link.href}
+                className="mt-3 inline-flex items-center gap-1 text-sm font-semibold text-info hover:underline"
+              >
+                {item.link.label}
+                <span aria-hidden>→</span>
+              </Link>
+            )
+          ) : null}
+          {item.footnote ? (
+            <p className="mt-3 text-sm italic text-text-muted">{item.footnote}</p>
+          ) : null}
+        </article>
+      ))}
+    </section>
   );
 }

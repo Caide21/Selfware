@@ -1,0 +1,80 @@
+@tailwind base;
+@tailwind components;
+
+@layer components {
+  .badge-core {
+    @apply inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium tracking-tight transition-all duration-150 ease-out border;
+  }
+
+  .badge-core .badge-icon {
+    @apply text-[0.8rem] opacity-80;
+  }
+
+  .badge-core .badge-label {
+    @apply leading-none;
+  }
+
+  .card-hover {
+    @apply transition-all duration-150 ease-out hover:-translate-y-0.5 hover:shadow-lg;
+  }
+
+  .motion-hover,
+  .motion-selected {
+    @apply -translate-y-0.5;
+  }
+
+  .motion-selected {
+    @apply ring-2 ring-offset-2 ring-offset-black/20;
+  }
+
+  .motion-active {
+    @apply shadow-lg;
+  }
+
+  .motion-celebrate {
+    position: relative;
+    overflow: hidden;
+  }
+
+  .motion-celebrate::after {
+    content: '';
+    position: absolute;
+    inset: -150% -50%;
+    background: linear-gradient(120deg, transparent 30%, rgba(255,255,255,0.35) 50%, transparent 70%);
+    transform: rotate(15deg);
+    animation: badge-shine 1.2s ease-out 0s 1;
+    pointer-events: none;
+  }
+
+  .motion-pending {
+    @apply animate-pulse-slow;
+  }
+
+  .motion-error {
+    @apply ring-2 ring-rose-400/70;
+  }
+
+  .animate-pulse-slow {
+    animation: badge-pulse 2.5s ease-in-out infinite;
+  }
+
+  @keyframes badge-pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.05); opacity: 0.85; }
+  }
+
+  @keyframes badge-shine {
+    0% { transform: translateX(-30%) rotate(15deg); opacity: 0; }
+    30% { opacity: 1; }
+    70% { opacity: 1; }
+    100% { transform: translateX(30%) rotate(15deg); opacity: 0; }
+  }
+
+  [data-today="true"] .badge-core {
+    box-shadow: 0 0 15px rgba(52, 211, 153, 0.45);
+  }
+
+  [data-equipped="true"] .badge-core {
+    box-shadow: 0 0 12px rgba(129, 140, 248, 0.45);
+  }
+}
