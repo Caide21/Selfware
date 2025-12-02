@@ -1,13 +1,14 @@
 ﻿// pages/quests/index.js
 import React, { useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
-import QuestCard from '../../components/Cards/QuestCard';
+import QuestCard from '@/modules/quests/QuestCard';
 import { usePageHeading } from '../../components/Layout/PageShell';
 import SelectMenu from '../../components/ui/QuestSelectMenu';
 import InlineComposer from '../../components/Quests/InlineComposer';
 import { supabase } from '../../lib/supabaseClient';
 import { fetchQuests as apiFetchQuests, updateQuest as apiUpdateQuest, createQuest as apiCreateQuest, createSubquest as apiCreateSubquest, moveQuest as apiMoveQuest, deleteQuest as apiDeleteQuest, nextIndex as apiNextIndex, reindexGroup as apiReindexGroup } from '@/components/Quests';
 import { TextInput, TextAreaAuto } from '@/components/Form';
+import { hasEditAccess } from '@/lib/auth/permissions';
 
 import {
   DndContext,
@@ -70,6 +71,7 @@ export default function QuestsPage() {
   const [quests, setQuests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
+  const [sessionUser, setSessionUser] = useState(null);
 
   // Inline form
   const [showForm, setShowForm] = useState(false);
@@ -86,7 +88,32 @@ export default function QuestsPage() {
   const [actionError, setActionError] = useState(null);
   const [saving, setSaving] = useState(false);
 
+  const sessionUserId = sessionUser?.id ?? null;
+  const canEditAll = hasEditAccess(sessionUser);
+
+  const canEditQuest = (quest) => {
+    if (!quest || !sessionUser) return false;
+    if (canEditAll) return true;
+    if (!quest.owner_id) return true;
+    return quest.owner_id === sessionUserId;
+  };
+
   usePageHeading(PAGE_HEADING);
+
+  useEffect(() => {
+    let cancelled = false;
+    supabase.auth
+      .getUser()
+      .then(({ data }) => {
+        if (!cancelled) {
+          setSessionUser(data?.user || null);
+        }
+      })
+      .catch((error) => console.error('Failed to resolve session user for quests', error));
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Expand/collapse
   const [expanded, setExpanded] = useState({});
@@ -111,7 +138,11 @@ export default function QuestsPage() {
     return () => window.removeEventListener('mousemove', onMove);
   }, []);
 
-  function beginDrag(id) { setActiveId(id); }
+  function beginDrag(id) {
+    const quest = quests.find((q) => q.id === id);
+    if (!canEditQuest(quest)) return;
+    setActiveId(id);
+  }
   function endDrag() { setActiveId(null); }
 
   // Build children map for subtree rendering
@@ -180,13 +211,17 @@ export default function QuestsPage() {
   }
 
   async function getSessionUser() {
+    if (sessionUser) return sessionUser;
     const { data } = await supabase.auth.getUser();
-    return data?.user || null;
+    const user = data?.user || null;
+    setSessionUser(user);
+    return user;
   }
 
   async function ensureOwnership(id) {
     const user = await getSessionUser();
     if (!user) return { ok: false, msg: 'Not signed in.' };
+    if (hasEditAccess(user)) return { ok: true };
     const { error } = await supabase
       .from('quests')
       .update({ owner_id: user.id })
@@ -259,11 +294,13 @@ export default function QuestsPage() {
 
   async function updateQuestInline(id, payload) {
     try {
-      const { data: u } = await supabase.auth.getUser();
-      const ownerId = u?.user?.id || null;
+      const user = await getSessionUser();
+      const ownerId = user?.id || null;
       await apiUpdateQuest(id, { ...payload, owner_id: ownerId });
       await reloadQuests();
-    } catch (e) { setActionError(e.message); }
+    } catch (e) {
+      setActionError(e.message);
+    }
   }
 
   async function deleteQuest(id) {
@@ -344,6 +381,7 @@ export default function QuestsPage() {
                   onClickBody={() => toggleExpand(child.id)}
                   isExpanded={isExpanded(child.id)}
                   onSaved={reloadQuests}
+                  canEdit={canEditQuest(child)}
                 />
               </div>
               {renderSubtree(child.id, depth + 1)}
@@ -381,6 +419,7 @@ export default function QuestsPage() {
                     onClickBody={() => toggleExpand(q.id)}
                   isExpanded={isExpanded(q.id)}
                   onSaved={reloadQuests}
+                  canEdit={canEditQuest(q)}
                   />
                   {renderSubtree(q.id, 1)}
                 </div>
@@ -425,6 +464,11 @@ export default function QuestsPage() {
                 }
 
                 const activeId = active.id;
+                const activeQuest = quests.find((q) => q.id === activeId);
+                if (!canEditQuest(activeQuest)) {
+                  endDrag();
+                  return;
+                }
                 const overId = over.id;
 
                 if (typeof overId === 'string' && overId.startsWith('lane:')) {

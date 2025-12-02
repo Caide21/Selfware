@@ -1,22 +1,28 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import Badge from '@/components/ui/Badge';
 import { resolveTags, tagFromSlug } from '@/components/ui/tagRegistry';
 import AttachmentEditor from './AttachmentEditor';
+import { useEditorEscape } from '@/modules/cards/useEditorKeys';
 
 export default function CardEditor({
   card,
   attachments = [],
   onUpdate,
   onUpdateTags,
-  onUpdateAttachment, onAddAttachment,
+  onUpdateAttachment,
+  onAddAttachment,
+  onExit,
 }) {
   const [localTitle, setLocalTitle] = useState(card?.title || '');
   const [tagInput, setTagInput] = useState('');
   const tags = useMemo(() => resolveTags(card?.state?.tags || []), [card]);
+  const containerRef = useRef(null);
 
   useEffect(() => {
     setLocalTitle(card?.title || '');
   }, [card?.id, card?.title]);
+
+  useEditorEscape({ onExit, ref: containerRef });
 
   if (!card) return null;
 
@@ -41,7 +47,7 @@ export default function CardEditor({
   };
 
   return (
-    <div className="space-y-4">
+    <div ref={containerRef} tabIndex={0} className="space-y-4 focus:outline-none">
       <div>
         <label className="text-xs uppercase tracking-wide text-white/60 block mb-1">Title</label>
         <input
@@ -74,7 +80,7 @@ export default function CardEditor({
             >
               <Badge tag={tag} state="selected" />
               <span className="absolute -top-1 -right-1 hidden group-hover:flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[10px] text-white">
-                Ã—
+                A-
               </span>
             </button>
           ))}
@@ -126,4 +132,3 @@ export default function CardEditor({
     </div>
   );
 }
-

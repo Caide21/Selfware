@@ -1,4 +1,4 @@
-import '../styles/globals.css';
+﻿import '../styles/globals.css';
 import '../styles/z-layer.css';
 import '../styles/fog.css'; // dYO? visual fog overlays (only show when ERS is ACTIVE)
 import '../styles/enchantments.css';
@@ -27,7 +27,7 @@ export default function App({ Component, pageProps }) {
 
       // Callback fires only when ERS is ACTIVE or REFLECTIVE
       onFeedback: ({ emotion, fog }) => {
-        console.log('dY�z ERS feedback:', { emotion, fog });
+        console.log('dYï¿½z ERS feedback:', { emotion, fog });
         triggerFog(fog); // Inject symbolic fog overlay
         pulseSigil(emotion); // Pulse emotion-linked sigil (placeholder)
       },
@@ -35,9 +35,10 @@ export default function App({ Component, pageProps }) {
   }, []);
 
   const showCorridorSpine = Component.showCorridorSpine ?? true;
+  const enablePsytrip = Component.psytrip ?? false;
 
   return (
-    <PageShell showCorridorSpine={showCorridorSpine}>
+    <PageShell showCorridorSpine={showCorridorSpine} psytrip={enablePsytrip}>
       <Head>
         <meta name="theme-color" content="#FFFFFF" />
       </Head>
@@ -46,3 +47,4 @@ export default function App({ Component, pageProps }) {
     </PageShell>
   );
 }
+

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/router';
 import AuthStatus from '../nav/AuthStatus';
+import NavBar from '../NavBar';
 
 const NAV_LINKS = [
   { href: '/mind-arsenal', label: 'Mind Arsenal' },
@@ -46,9 +47,9 @@ export default function Nav() {
   }, []);
 
   return (
-    <nav className="fixed inset-x-0 top-0 z-50">
-      <div className="mx-auto max-w-6xl px-4 py-4 sm:px-6">
-        <div className="flex items-center justify-between rounded-3xl border border-white/30 bg-white/70 px-4 py-3 shadow-[0_8px_35px_rgba(15,23,42,0.08)] backdrop-blur-xl sm:px-6">
+    <nav className="z-50 px-4 pt-4 sm:px-6">
+      <NavBar>
+        <div className="flex items-center justify-between gap-4 sm:gap-6">
           <Link href="/home" className="flex items-center gap-2 text-lg font-semibold text-text">
             <span className="h-8 w-8 rounded-full bg-gradient-to-br from-purple-500 via-teal-400 to-rose-400 opacity-90" />
             <span className="text-base font-semibold tracking-[0.25em] text-text sm:text-lg">Selfware</span>
@@ -151,7 +152,7 @@ export default function Nav() {
             <AuthStatus />
           </div>
         </div>
-      </div>
+      </NavBar>
     </nav>
   );
 }

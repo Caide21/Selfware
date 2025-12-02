@@ -81,7 +81,7 @@ export default function AuthStatus({ className = "" }) {
         <>
           <span className="text-zinc-600 dark:text-zinc-300">Guest</span>
           <a
-            href="/login"
+            href="/join/login"
             className="ml-1 inline-flex items-center gap-1 rounded-md px-2 py-0.5 border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-800"
             title="Sign in"
           >

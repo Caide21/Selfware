@@ -1,10 +1,10 @@
-import { createContext, useContext, useEffect, useMemo, useState } from 'react';
+﻿import { createContext, useContext, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/router';
 import { ThemeProvider } from '@/context/ThemeContext';
-import { PrismPaperProvider } from '@/components/Themes/PrismPaper';
+import PrismThemeProvider from '@/theme/PrismThemeProvider';
 import PhaseShiftLayer from '../Enchantments/PhaseShiftLayer';
-import PsyTripEngine from '../Enchantments/PsyTripEngine';
 import PageHeading from './PageHeading';
+import { PsytripField, enablePsytrip, disablePsytrip, PsytripFlags } from '@/lib/psytrip/engine';
 import useIdle from '@/hooks/useIdle';
 
 const PageShellContext = createContext({
@@ -25,7 +25,7 @@ export function usePageHeading(heading) {
   }, [heading, setHeading]);
 }
 
-function PageShellInner({ children, initialHeading = null, showCorridorSpine = true }) {
+function PageShellInner({ children, initialHeading = null, showCorridorSpine = true, psytrip = false }) {
   const router = useRouter();
   const { pathname } = router;
   const isIdle = useIdle(8000);
@@ -64,6 +64,45 @@ function PageShellInner({ children, initialHeading = null, showCorridorSpine = t
     return () => clearTimeout(id);
   }, [pathname]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined;
+    const media = window.matchMedia('(prefers-reduced-motion: reduce)');
+
+    const apply = () => {
+      const allowMotion = !media.matches;
+      if (psytrip && allowMotion) {
+        enablePsytrip();
+        if (PsytripFlags.drift) {
+          document.documentElement.classList.add('psytrip-drift');
+        } else {
+          document.documentElement.classList.remove('psytrip-drift');
+        }
+      } else {
+        disablePsytrip();
+        document.documentElement.classList.remove('psytrip-drift');
+      }
+    };
+
+    apply();
+
+    const handleChange = () => apply();
+    if (media.addEventListener) {
+      media.addEventListener('change', handleChange);
+    } else {
+      media.addListener(handleChange);
+    }
+
+    return () => {
+      if (media.removeEventListener) {
+        media.removeEventListener('change', handleChange);
+      } else {
+        media.removeListener(handleChange);
+      }
+      disablePsytrip();
+      document.documentElement.classList.remove('psytrip-drift');
+    };
+  }, [psytrip]);
+
   const contextValue = useMemo(
     () => ({
       heading,
@@ -74,13 +113,10 @@ function PageShellInner({ children, initialHeading = null, showCorridorSpine = t
 
   return (
     <PageShellContext.Provider value={contextValue}>
-      <PrismPaperProvider>
-        <div
-          data-theme-color={themeColor}
-          className="min-h-screen text-text transition-colors"
-        >
+      <PrismThemeProvider>
+        <div data-theme-color={themeColor} className="min-h-screen bg-prism-app text-text transition-colors">
+          <PsytripField />
           <PhaseShiftLayer isIdle={isIdle} />
-          <PsyTripEngine isIdle={isIdle} />
 
           <main
             className={[
@@ -102,17 +138,18 @@ function PageShellInner({ children, initialHeading = null, showCorridorSpine = t
             </div>
           </main>
         </div>
-      </PrismPaperProvider>
+      </PrismThemeProvider>
     </PageShellContext.Provider>
   );
 }
 
-export default function PageShell({ children, heading = null, showCorridorSpine = true }) {
+export default function PageShell({ children, heading = null, showCorridorSpine = true, psytrip = false }) {
   return (
     <ThemeProvider>
-      <PageShellInner initialHeading={heading} showCorridorSpine={showCorridorSpine}>
+      <PageShellInner initialHeading={heading} showCorridorSpine={showCorridorSpine} psytrip={psytrip}>
         {children}
       </PageShellInner>
     </ThemeProvider>
   );
 }
+

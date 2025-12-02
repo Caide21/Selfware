@@ -2,7 +2,7 @@
 import { usePageHeading } from '@/components/Layout/PageShell';
 import ImportJSON from '@/components/Upload/ImportJSON';
 import ExportJSON from '@/components/Upload/ExportJSON';
-import ItemCard from '@/components/Inventory/ItemCard';
+import InventoryCard from '@/modules/inventory/InventoryCard';
 import { useInventoryStore } from '@/stores/inventory';
 import { supabase } from '@/lib/supabaseClient';
 import { TextInput } from '@/components/Form';
@@ -16,11 +16,13 @@ const PAGE_HEADING = {
 
 export default function InventoryPage() {
   usePageHeading(PAGE_HEADING);
-  const { items, importJSON, addItem, updateItem, removeItem, exportJSON, fetchInventory, loading } = useInventoryStore();
+  const { items, importJSON, addItem, updateItem, removeItem, exportJSON, fetchInventory, loading } =
+    useInventoryStore();
   const [q, setQ] = useState('');
   const [kind, setKind] = useState('');
   const [tag, setTag] = useState('');
-  const [userId, setUserId] = useState(null);
+  const [user, setUser] = useState(null);
+  const userId = user?.id ?? null;
 
   useEffect(() => {
     let cancelled = false;
@@ -28,10 +30,10 @@ export default function InventoryPage() {
       try {
         const { data } = await supabase.auth.getUser();
         if (cancelled) return;
-        const uid = data?.user?.id ?? null;
-        setUserId(uid);
-        if (uid) {
-          await fetchInventory(uid);
+        const resolved = data?.user ?? null;
+        setUser(resolved);
+        if (resolved?.id) {
+          await fetchInventory(resolved.id);
         }
       } catch (error) {
         console.error('Failed to resolve user for inventory', error);
@@ -100,45 +102,57 @@ export default function InventoryPage() {
       </div>
 
       <div className="grid md:grid-cols-3 gap-3">
-        {filtered.map((it) => (
-          <ItemCard
-            key={it.id}
-            item={it}
-            onEdit={async () => {
-              if (!requireUser()) return;
-              const next = prompt('Name', it.name);
-              if (next == null) return;
-              try {
+        {filtered.map((it) => {
+          const tags = Array.isArray(it.tags) && it.tags.length ? (
+            <div className="text-xs opacity-70">{it.tags.join(', ')}</div>
+          ) : null;
+          const description = it.description || it.details?.description || it.details?.notes || null;
+          return (
+            <InventoryCard
+              key={it.id}
+              item={it}
+              user={user}
+              onAddToLoadout={() => {}}
+              onEdit={async () => {
+                if (!requireUser()) return;
+                const next = prompt('Name', it.name);
+                if (next == null) return;
+                try {
                 await updateItem(userId, it.id, { name: next });
-              } catch (error) {
-                console.error('Update item failed', error);
-                alert('Update failed');
-              }
-            }}
-            onDuplicate={async () => {
-              if (!requireUser()) return;
-              const clone = { ...it, name: `${it.name} (copy)` };
-              delete clone.id;
-              try {
-                await addItem(userId, clone);
-              } catch (error) {
-                console.error('Duplicate item failed', error);
-                alert('Duplicate failed');
-              }
-            }}
-            onRemove={async () => {
-              if (!requireUser()) return;
-              if (!confirm('Remove this item?')) return;
-              try {
-                await removeItem(userId, it.id);
-              } catch (error) {
-                console.error('Remove item failed', error);
-                alert('Remove failed');
-              }
-            }}
-            onAddToLoadout={() => {}}
-          />
-        ))}
+                } catch (error) {
+                  console.error('Update item failed', error);
+                  alert('Update failed');
+                }
+              }}
+              onDuplicate={async () => {
+                if (!requireUser()) return;
+                const clone = { ...it, name: `${it.name} (copy)` };
+                delete clone.id;
+                try {
+                  await addItem(userId, clone);
+                } catch (error) {
+                  console.error('Duplicate item failed', error);
+                  alert('Duplicate failed');
+                }
+              }}
+              onRemove={async () => {
+                if (!requireUser()) return;
+                if (!confirm('Remove this item?')) return;
+                try {
+                  await removeItem(userId, it.id);
+                } catch (error) {
+                  console.error('Remove item failed', error);
+                  alert('Remove failed');
+                }
+              }}
+            >
+              <div className="space-y-2 text-sm text-text/80">
+                {description ? <p>{description}</p> : null}
+                {tags}
+              </div>
+            </InventoryCard>
+          );
+        })}
         {!filtered.length && <div className="text-sm opacity-60">No items</div>}
       </div>
     </div>

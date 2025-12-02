@@ -1,3 +1,4 @@
+﻿import Card from '@/components/CardKit/Card';
 import Badge from '@/components/ui/Badge';
 import { resolveTags, tagFromSlug } from '@/components/ui/tagRegistry';
 import { useCardStyle } from '@/components/Card/useCardStyle';
@@ -31,16 +32,16 @@ export default function EntryCard({ title, summary, status, tags }) {
   const statusTag = status ? STATUS_TAGS[status] : null;
   const tagList = resolveTags(tags);
   const cardTags = statusTag ? [statusTag, ...tagList] : tagList;
-  const { cardClass, titleClass } = useCardStyle({ tags: cardTags });
+  const { variant } = useCardStyle({ tags: cardTags });
+
   return (
-    <div className={`${cardClass} bg-white/5 p-4 card-hover`}>
-      <div className="flex items-start justify-between gap-4">
-        <h3 className={`text-lg ${titleClass}`}>{title}</h3>
-        {statusTag ? <Badge tag={statusTag} state={status === 'equipped' ? 'selected' : 'idle'} /> : null}
-      </div>
-
-      <p className="mt-2 text-sm text-white/70 leading-relaxed">{summary}</p>
-
+    <Card
+      title={title}
+      variant={variant}
+      interactive={false}
+      meta={statusTag ? statusTag.label : undefined}
+    >
+      {summary ? <p className="text-sm text-text/80 leading-relaxed">{summary}</p> : null}
       {!!tagList.length && (
         <div className="mt-3 flex flex-wrap gap-2">
           {tagList.map((tag) => (
@@ -48,6 +49,8 @@ export default function EntryCard({ title, summary, status, tags }) {
           ))}
         </div>
       )}
-    </div>
+    </Card>
   );
 }
+
+

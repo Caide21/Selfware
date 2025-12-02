@@ -100,6 +100,7 @@ export default function CardBuilderDemo() {
               card={activeCard}
               attachments={activeAttachments}
               onUpdate={(patch) => apply('update_card', { id: activeCard.id, patch })}
+              onExit={() => setMode('build')}
               onUpdateTags={(tags) =>
                 apply('update_card', {
                   id: activeCard.id,
@@ -134,10 +135,7 @@ export default function CardBuilderDemo() {
       ) : null}
 
       <div className="space-y-2 text-xs text-text-muted">
-        <p>
-          Keyboard: N (new), E (edit toggle), P (play toggle), Delete (remove), Cmd/Ctrl+D (duplicate), Cmd/Ctrl+Z
-          (undo), Cmd/Ctrl+Shift+Z (redo).
-        </p>
+        <p>Keyboard: Escape exits the editor when focused.</p>
         <p>
           Listen for <code>cardbuilder-error</code> events to surface toasts.
         </p>

@@ -1,3 +1,4 @@
+﻿import Card from '@/components/CardKit/Card';
 import Link from 'next/link';
 import Badge from '@/components/ui/Badge';
 import { resolveTags, tagFromSlug } from '@/components/ui/tagRegistry';
@@ -7,33 +8,31 @@ const TODAY_TAG = tagFromSlug('loadout:today', {
   label: 'Today',
   tone: 'status',
   intent: 'active',
-  grade: 'balanced',
 });
 
 export default function LoadoutCard({ loadout, onEquipToday, onDelete, equipping }) {
   const isToday = loadout.isToday || loadout.is_today;
   const baseTags = resolveTags(loadout.tags || []);
   const tags = isToday ? [TODAY_TAG, ...baseTags] : baseTags;
-  const { cardClass, titleClass } = useCardStyle({ tags, selected: isToday });
+  const { variant } = useCardStyle({ tags, selected: isToday });
   const itemCount = Array.isArray(loadout.items) ? loadout.items.length : 0;
 
   return (
-    <div className={`${cardClass} p-3 space-y-2`} data-today={isToday ? 'true' : 'false'}>
-      <div className="flex items-center justify-between">
-        <div className={`flex items-center gap-2 ${titleClass}`}>
-          <span>{loadout.name}</span>
-          {isToday ? <Badge tag={TODAY_TAG} state="selected" /> : null}
-        </div>
-        <div className="text-xs opacity-70">items: {itemCount}</div>
-      </div>
-
-      {!!tags.length && (
-        <div className="flex flex-wrap gap-2">
+    <Card
+      variant={variant}
+      title={loadout.name}
+      meta={`Items: ${itemCount}`}
+      interactive={false}
+      selected={isToday}
+      data-today={isToday ? 'true' : 'false'}
+    >
+      {tags.length ? (
+        <div className="mb-3 flex flex-wrap gap-2">
           {tags.map((tag) => (
-            <Badge key={tag.slug || tag.label} tag={tag} />
+            <Badge key={tag.slug || tag.label} tag={tag} state={isToday ? 'selected' : 'idle'} />
           ))}
         </div>
-      )}
+      ) : null}
 
       <div className="flex gap-2 text-xs">
         <Link className="px-2 py-1 border rounded" href={`/loadouts/${loadout.id}`}>
@@ -46,6 +45,6 @@ export default function LoadoutCard({ loadout, onEquipToday, onDelete, equipping
           Delete
         </button>
       </div>
-    </div>
+    </Card>
   );
 }

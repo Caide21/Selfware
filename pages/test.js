@@ -1,4 +1,4 @@
-﻿import { useMemo } from 'react';
+import { useMemo } from 'react';
 import CardView from '@/components/CardBuilder/CardView';
 import SectionBand from '@/components/Surface/SectionBand';
 import PrimaryButton from '@/components/ui/PrimaryButton';
@@ -275,7 +275,8 @@ export default function TestPage() {
         mode={mode}
         setMode={setMode}
         activeCard={activeCard}
-        activeAttachments={activeAttachments}
+        activeattachments={activeAttachments}
+                onExit={() => setMode('build')}
         cardCount={cardCount}
       />
       <FinalCTA />
@@ -306,7 +307,7 @@ function HeroSection() {
           className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.4em] text-text-muted"
         >
           <span>See the steps</span>
-          <span aria-hidden>↓</span>
+          <span aria-hidden>?</span>
         </a>
       </div>
     </section>
@@ -457,6 +458,7 @@ function LiveEditingPanel({ mode, setMode, activeCard, activeAttachments, cardCo
               <CardEditor
                 card={activeCard}
                 attachments={activeAttachments}
+                onExit={() => setMode('build')}
                 onUpdate={(patch) => apply('update_card', { id: activeCard.id, patch })}
                 onUpdateTags={(tags) =>
                   apply('update_card', {
@@ -529,3 +531,4 @@ function FinalCTA() {
 }
 
 TestPage.showCorridorSpine = false;
+
