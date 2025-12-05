@@ -1,15 +1,17 @@
-export default function EmotionCard({ emotion }) {
+import { baseCardClasses, hoverClasses } from './cardChrome';
+
+export default function EmotionCard({ card, emotion }) {
+  const data = card || emotion || {};
+
   return (
-    <div className="w-full rounded-xl border bg-black/20 px-4 sm:px-6 py-4 shadow hover:shadow-lg transition-all space-y-2">
-      <div className="flex justify-between items-center">
-        <h3 className="text-base sm:text-lg font-semibold">
-          {emotion.symbol} {emotion.name}
-        </h3>
-        <span className="text-xs text-gray-400">Intensity: {emotion.intensity}/10</span>
+    <div className={`${baseCardClasses} border-rose-300/80 ${hoverClasses}`}>
+      <div className="flex items-center justify-between gap-3">
+        <div className="text-sm font-semibold text-rose-700">{data.label}</div>
+        {data.intensity !== undefined ? (
+          <span className="text-xs font-medium text-rose-600">Intensity {data.intensity}/10</span>
+        ) : null}
       </div>
-      <div className="text-sm text-gray-300">
-        <strong>Source:</strong> {emotion.source}
-      </div>
+      {data.note ? <div className="text-xs text-slate-600">{data.note}</div> : null}
     </div>
   );
 }

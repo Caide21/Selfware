@@ -1,33 +1,16 @@
-export default function StatCard({ stat }) {
-  const percent = Math.round((stat.xp / stat.maxXP) * 100);
-  const tierColors = {
-    Dormant: "bg-gray-500",
-    Fogged: "bg-gray-600",
-    Flickering: "bg-yellow-600",
-    Stirring: "bg-amber-600",
-    Sharpened: "bg-blue-600",
-    Resonant: "bg-purple-600",
-    Radiant: "bg-pink-600",
-    Mythic: "bg-gradient-to-r from-pink-500 to-indigo-500 animate-pulse"
-  };
+import { baseCardClasses, hoverClasses } from './cardChrome';
+
+export default function StatCard({ card, stat }) {
+  const data = card || stat || {};
 
   return (
-    <div className="w-full rounded-2xl px-4 sm:px-6 py-4 border bg-black/20 shadow-md space-y-2">
-      <div className="flex justify-between items-center">
-        <h2 className="text-base sm:text-xl font-semibold">{stat.label}</h2>
-        <span className={`text-sm font-medium ${tierColors[stat.tier] || ""}`}>
-          {stat.tier} (Lv. {stat.tierLevel})
-        </span>
+    <div className={`${baseCardClasses} border-emerald-400/70 ${hoverClasses}`}>
+      <div className="text-xs uppercase tracking-wide text-emerald-600 font-semibold">Stat</div>
+      <div className="flex items-baseline gap-3">
+        <div className="text-3xl font-semibold text-emerald-700">{data.value ?? '--'}</div>
+        {data.unit ? <div className="text-sm text-slate-500">{data.unit}</div> : null}
       </div>
-      <div className="h-2 w-full bg-gray-700 rounded-full overflow-hidden">
-        <div
-          className={`h-full ${tierColors[stat.tier] || "bg-gray-400"}`}
-          style={{ width: `${percent}%` }}
-        />
-      </div>
-      <div className="text-sm text-gray-300">
-        {stat.xp} / {stat.maxXP} XP — {stat.descriptor}
-      </div>
+      <div className="text-sm font-medium text-slate-900">{data.label}</div>
     </div>
   );
 }

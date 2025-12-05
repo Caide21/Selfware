@@ -7,7 +7,6 @@ import { Pencil, Trash2, Calendar, ChevronRight, ChevronDown, Plus, X, Check, Gr
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { updateQuest, createSubquest } from '@/components/Quests';
-import Card from '@/components/CardKit/Card';
 import { useEditorEscape } from '@/modules/cards/useEditorKeys';
 
 export default function QuestCard({
@@ -30,6 +29,9 @@ export default function QuestCard({
   onDragStartCard,
   depth = 0,
   canEdit = true,
+  status,
+  xp,
+  tags,
 }) {
   const [editing, setEditing] = useState(false);
   const [draftTitle, setDraftTitle] = useState(title || '');
@@ -64,12 +66,6 @@ export default function QuestCard({
     disabled: !canEdit,
   });
   const style = { transform: CSS.Transform.toString(transform), transition };
-  const variant =
-    {
-      main: 'info',
-      inactive: 'warning',
-      busy: 'busy',
-    }[category] ?? 'neutral';
 
   const diffBadge =
     {
@@ -77,6 +73,13 @@ export default function QuestCard({
       medium: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
       hard: 'bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-300',
     }[difficulty] || 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300';
+
+  const categoryLabel = category ? category.charAt(0).toUpperCase() + category.slice(1) : null;
+  const statusLabel = status ? status.replace(/_/g, ' ').toUpperCase() : null;
+  const statusBadge =
+    'inline-flex items-center rounded-full border border-amber-300/60 bg-amber-50/60 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-700';
+  const xpBadge =
+    'inline-flex items-center rounded-full border border-amber-200/70 bg-amber-50/70 px-2 py-0.5 text-[11px] font-semibold text-amber-700';
 
   function formattedTime(iso) {
     try {
@@ -136,9 +139,6 @@ export default function QuestCard({
   });
 
   const dragging = isDragging || kitDragging;
-  const cardClassName = ['group transition', dragging ? 'opacity-40 cursor-grabbing' : '']
-    .filter(Boolean)
-    .join(' ');
   const dragAttributes = canEdit ? attributes : {};
   const dragListeners = canEdit ? listeners : {};
   const dragButtonClass = canEdit
@@ -191,102 +191,127 @@ export default function QuestCard({
         </div>
       ) : null}
 
-      <div className="flex items-start justify-between gap-2 pr-12">
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            aria-label="Drag quest"
-            aria-roledescription="sortable"
-            className={dragButtonClass}
-            disabled={!canEdit}
-            {...dragAttributes}
-            {...dragListeners}
-          >
-            <GripVertical className="h-3.5 w-3.5 opacity-60" />
-          </button>
-          <button
-            type="button"
-            onClick={() => onClickBody?.(id)}
-            className="flex items-center gap-2 rounded-md text-left focus:outline-none"
-            title={childrenCount > 0 ? 'Expand / collapse' : undefined}
-          >
-            {childrenCount > 0 ? (
-              isExpanded ? (
-                <ChevronDown className="h-4 w-4 opacity-70" />
+      <div className="flex items-start gap-3 pr-12">
+        <button
+          type="button"
+          aria-label="Drag quest"
+          aria-roledescription="sortable"
+          className={dragButtonClass}
+          disabled={!canEdit}
+          {...dragAttributes}
+          {...dragListeners}
+        >
+          <GripVertical className="h-3.5 w-3.5 opacity-60" />
+        </button>
+        <div className="flex-1 space-y-2">
+          <div className="flex items-start justify-between gap-3">
+            <button
+              type="button"
+              onClick={() => onClickBody?.(id)}
+              className="flex items-center gap-2 rounded-md text-left focus:outline-none"
+              title={childrenCount > 0 ? 'Expand / collapse' : undefined}
+            >
+              {childrenCount > 0 ? (
+                isExpanded ? (
+                  <ChevronDown className="h-4 w-4 opacity-70" />
+                ) : (
+                  <ChevronRight className="h-4 w-4 opacity-70" />
+                )
               ) : (
-                <ChevronRight className="h-4 w-4 opacity-70" />
-              )
-            ) : (
-              <span className="h-4 w-4" aria-hidden="true" />
-            )}
+                <span className="h-4 w-4" aria-hidden="true" />
+              )}
 
+              {!editing ? (
+                <>
+                  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${diffBadge}`}>
+                    {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
+                  </span>
+                  {categoryLabel ? (
+                    <span className="rounded-full border border-amber-200/70 bg-amber-50/60 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-amber-700">
+                      {categoryLabel}
+                    </span>
+                  ) : null}
+                  <h3 className="text-base font-semibold">{title}</h3>
+                </>
+              ) : (
+                <>
+                  <select
+                    className="ui-select"
+                    value={draftDifficulty}
+                    onChange={(event) => setDraftDifficulty(event.target.value)}
+                    data-no-dnd
+                  >
+                    <option value="easy">Easy</option>
+                    <option value="medium">Medium</option>
+                    <option value="hard">Hard</option>
+                  </select>
+                  <TextInput
+                    className="ml-2 text-base font-semibold"
+                    value={draftTitle}
+                    onChange={(event) => setDraftTitle(event.target.value)}
+                    data-no-dnd
+                    placeholder="Quest title"
+                  />
+                </>
+              )}
+            </button>
+
+            <div className="flex items-center gap-2">
+              {xp !== undefined && xp !== null ? <span className={xpBadge}>XP {xp}</span> : null}
+              {statusLabel ? <span className={statusBadge}>{statusLabel}</span> : null}
+            </div>
+          </div>
+
+          <div className="mt-1">
             {!editing ? (
               <>
-                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${diffBadge}`}>
-                  {difficulty.charAt(0).toUpperCase() + difficulty.slice(1)}
-                </span>
-                <h3 className="text-base font-semibold">{title}</h3>
+                {timeLimit && (
+                  <div className="mt-1 flex items-center gap-1 text-xs text-zinc-500">
+                    <Calendar className="h-3 w-3" />
+                    <time dateTime={timeLimit}>{formattedTime(timeLimit)}</time>
+                  </div>
+                )}
+                {extraInfo && <p className="mt-2 text-sm text-zinc-700 dark:text-zinc-300">{extraInfo}</p>}
               </>
             ) : (
               <>
-                <select
-                  className="ui-select"
-                  value={draftDifficulty}
-                  onChange={(event) => setDraftDifficulty(event.target.value)}
-                  data-no-dnd
-                >
-                  <option value="easy">Easy</option>
-                  <option value="medium">Medium</option>
-                  <option value="hard">Hard</option>
-                </select>
-                <TextInput
-                  className="ml-2 text-base font-semibold"
-                  value={draftTitle}
-                  onChange={(event) => setDraftTitle(event.target.value)}
-                  data-no-dnd
-                  placeholder="Quest title"
-                />
+                <label className="block">
+                  <span className="text-xs text-zinc-500">Time limit</span>
+                  <TextInput
+                    type="datetime-local"
+                    value={draftTimeLimit}
+                    onChange={(event) => setDraftTimeLimit(event.target.value)}
+                    data-no-dnd
+                  />
+                </label>
+                <div className="mt-2">
+                  <TextAreaAuto
+                    label="Extra info"
+                    value={draftExtra}
+                    onChange={(event) => setDraftExtra(event.target.value)}
+                    data-no-dnd
+                    placeholder="Notes, details, acceptance criteria..."
+                    maxRows={6}
+                  />
+                </div>
               </>
             )}
-          </button>
+          </div>
         </div>
       </div>
 
-      <div className="mt-2">
-        {!editing ? (
-          <>
-            {timeLimit && (
-              <div className="mt-1 flex items-center gap-1 text-xs text-zinc-500">
-                <Calendar className="h-3 w-3" />
-                <time dateTime={timeLimit}>{formattedTime(timeLimit)}</time>
-              </div>
-            )}
-            {extraInfo && <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-300">{extraInfo}</p>}
-          </>
-        ) : (
-          <>
-            <label className="block">
-              <span className="text-xs text-zinc-500">Time limit</span>
-              <TextInput
-                type="datetime-local"
-                value={draftTimeLimit}
-                onChange={(event) => setDraftTimeLimit(event.target.value)}
-                data-no-dnd
-              />
-            </label>
-            <div className="mt-2">
-              <TextAreaAuto
-                label="Extra info"
-                value={draftExtra}
-                onChange={(event) => setDraftExtra(event.target.value)}
-                data-no-dnd
-                placeholder="Notes, details, acceptance criteria..."
-                maxRows={6}
-              />
-            </div>
-          </>
-        )}
-      </div>
+      {Array.isArray(tags) && tags.length > 0 ? (
+        <div className="flex flex-wrap gap-2 text-[11px] text-amber-800">
+          {tags.map((tag) => (
+            <span
+              key={tag}
+              className="rounded-full border border-amber-200/60 bg-amber-50/70 px-2 py-0.5"
+            >
+              {tag}
+            </span>
+          ))}
+        </div>
+      ) : null}
 
       {editing && (
         <div className="mt-3 flex justify-end gap-2">
@@ -372,30 +397,25 @@ export default function QuestCard({
     </div>
   );
 
+  const cardBaseClasses =
+    'group relative w-full rounded-2xl border border-amber-300/70 bg-white/80 backdrop-blur-[2px] p-3 shadow-sm space-y-3 transition-transform transition-shadow duration-150 ease-out hover:-translate-y-[1px] hover:scale-[1.01] hover:shadow-[0_0_24px_rgba(251,191,36,0.4)]';
+  const cardClassName = [cardBaseClasses, dragging ? 'opacity-40 cursor-grabbing' : ''].filter(Boolean).join(' ');
+
   return (
-    <Card
+    <div
       ref={composedRef}
-      variant={variant}
-      interactive={false}
       className={cardClassName}
       style={style}
-      data-quest-id={dataId}
+      data-quest-id={dataId ?? id}
       data-depth={depth}
       role="article"
       aria-label={`Quest: ${title}`}
       onPointerDownCapture={() => {
         if (canEdit) onDragStartCard?.(id);
       }}
-      media={mediaContent}
-    />
+    >
+      {mediaContent}
+    </div>
   );
 }
-
-
-
-
-
-
-
-
 

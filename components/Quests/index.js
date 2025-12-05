@@ -41,7 +41,16 @@ async function getIndex(id) {
 }
 
 // ---------- CREATE ----------
-export async function createQuest({ title, difficulty = 'easy', category = 'side', timeLimit = '', extraInfo = '' }) {
+export async function createQuest({
+  title,
+  difficulty = 'easy',
+  category = 'side',
+  timeLimit = '',
+  extraInfo = '',
+  status = null,
+  xpValue = null,
+  xp_value = null,
+}) {
   const idx = await nextIndex(null, category);
   const row = {
     title: String(title || '').trim(),
@@ -51,6 +60,8 @@ export async function createQuest({ title, difficulty = 'easy', category = 'side
     order_index: idx,
     time_limit: timeLimit || null,
     extra_info: String(extraInfo || '').trim() || null,
+    status: status || null,
+    xp_value: xp_value ?? xpValue ?? null,
   };
   const { data, error } = await supabase.from('quests').insert(row).select('*').single();
   if (error) throw error;
@@ -79,6 +90,7 @@ export async function updateQuest(id, patch) {
   const _patch = { ...patch };
   if ('difficulty' in _patch) _patch.difficulty = normalizeDiff(_patch.difficulty);
   if ('timeLimit' in _patch) { _patch.time_limit = _patch.timeLimit; delete _patch.timeLimit; }
+  if ('xpValue' in _patch) { _patch.xp_value = _patch.xpValue; delete _patch.xpValue; }
   const { error } = await supabase.from('quests').update(_patch).eq('id', id);
   if (error) throw error;
 }
