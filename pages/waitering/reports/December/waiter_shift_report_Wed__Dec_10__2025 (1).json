@@ -1,0 +1,115 @@
+{
+  "shift": {
+    "id": "604cb3bd-899e-4f19-9e48-e7923f650f45",
+    "status": "completed",
+    "branch": "Bossa Somerset West",
+    "start_time": "2025-12-10T14:22:13.146+00:00",
+    "end_time": "2025-12-11T00:34:06.134+00:00",
+    "created_at": "2025-12-10T14:22:13.398865+00:00",
+    "updated_at": "2025-12-11T00:34:08.106985+00:00"
+  },
+  "summary": {
+    "duration_hours": 10.198052222222222,
+    "duration_formatted": "10h 12m",
+    "tables_count": 11,
+    "guests_total": 46,
+    "turnover_total": 6085,
+    "turnover_formatted": "R 6085.00",
+    "tips_total": 784,
+    "tips_formatted": "R 784.00",
+    "tip_percentage": "12.9%",
+    "tips_per_hour": "R 76.88"
+  },
+  "tables": [
+    {
+      "guests": 7,
+      "bill_total": 989,
+      "bill_total_formatted": "R 989.00",
+      "tip_amount": 211,
+      "tip_amount_formatted": "R 211.00",
+      "tip_percentage": "21.3%"
+    },
+    {
+      "guests": 3,
+      "bill_total": 713,
+      "bill_total_formatted": "R 713.00",
+      "tip_amount": 77,
+      "tip_amount_formatted": "R 77.00",
+      "tip_percentage": "10.8%"
+    },
+    {
+      "guests": 2,
+      "bill_total": 136,
+      "bill_total_formatted": "R 136.00",
+      "tip_amount": 14,
+      "tip_amount_formatted": "R 14.00",
+      "tip_percentage": "10.3%"
+    },
+    {
+      "guests": 5,
+      "bill_total": 1014,
+      "bill_total_formatted": "R 1014.00",
+      "tip_amount": 126,
+      "tip_amount_formatted": "R 126.00",
+      "tip_percentage": "12.4%"
+    },
+    {
+      "guests": 13,
+      "bill_total": 1221,
+      "bill_total_formatted": "R 1221.00",
+      "tip_amount": 180,
+      "tip_amount_formatted": "R 180.00",
+      "tip_percentage": "14.7%"
+    },
+    {
+      "guests": 1,
+      "bill_total": 63,
+      "bill_total_formatted": "R 63.00",
+      "tip_amount": 0,
+      "tip_amount_formatted": "R 0.00",
+      "tip_percentage": "0.0%"
+    },
+    {
+      "guests": 2,
+      "bill_total": 144,
+      "bill_total_formatted": "R 144.00",
+      "tip_amount": 20,
+      "tip_amount_formatted": "R 20.00",
+      "tip_percentage": "13.9%"
+    },
+    {
+      "guests": 3,
+      "bill_total": 100,
+      "bill_total_formatted": "R 100.00",
+      "tip_amount": 20,
+      "tip_amount_formatted": "R 20.00",
+      "tip_percentage": "20.0%"
+    },
+    {
+      "guests": 4,
+      "bill_total": 446,
+      "bill_total_formatted": "R 446.00",
+      "tip_amount": 54,
+      "tip_amount_formatted": "R 54.00",
+      "tip_percentage": "12.1%"
+    },
+    {
+      "guests": 3,
+      "bill_total": 571,
+      "bill_total_formatted": "R 571.00",
+      "tip_amount": 20,
+      "tip_amount_formatted": "R 20.00",
+      "tip_percentage": "3.5%"
+    },
+    {
+      "guests": 3,
+      "bill_total": 688,
+      "bill_total_formatted": "R 688.00",
+      "tip_amount": 62,
+      "tip_amount_formatted": "R 62.00",
+      "tip_percentage": "9.0%"
+    }
+  ],
+  "report_generated_at": "2025-12-11T01:15:31.285Z",
+  "report_generated_by": "4b02c486-f854-4e78-9954-d074bcd17ec4"
+}

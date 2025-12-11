@@ -1,16 +1,14 @@
-import { baseCardClasses, hoverClasses } from './cardChrome';
+import LoadoutCard from '@/components/Loadouts/LoadoutCard';
 
-export default function LoadoutCard({ card, loadout }) {
+export default function LoadoutCardWrapper({ card, loadout, ...rest }) {
   const data = card || loadout || {};
-  const linkedCount = Array.isArray(data.linkedItems) ? data.linkedItems.length : data.linkedCount ?? 0;
+  const linkedItems = data.linkedItems || data.items;
+  const linkedCount = Array.isArray(linkedItems) ? linkedItems.length : data.linkedCount;
 
   return (
-    <div className={`${baseCardClasses} border-teal-300/80 ${hoverClasses}`}>
-      <div className="text-sm font-semibold text-teal-800">{data.name}</div>
-      <div className="flex items-center justify-between text-xs text-slate-600">
-        <span className="font-medium uppercase tracking-wide text-teal-700">{data.mode}</span>
-        <span>{linkedCount} linked</span>
-      </div>
-    </div>
+    <LoadoutCard
+      loadout={{ ...data, linkedCount, isToday: data.isToday || data.is_today }}
+      {...rest}
+    />
   );
 }

@@ -1,10 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { baseCardClasses, hoverClasses, cardAccents } from './cardChrome';
+import Card from '@/components/CardKit/Card';
 import CardEditor from './CardEditor';
-
-const habitAccent = cardAccents.habit || 'border-cyan-300/70';
 
 function normalizeEdited(habit = {}) {
   return {
@@ -79,32 +77,25 @@ export default function HabitCard({ habit: habitProp, card, isNew: isNewProp = f
   const isEditing = mode === 'edit';
 
   return (
-    <div
-      className={`${baseCardClasses} ${habitAccent} ${hoverClasses} ${
-        isEditing ? 'ring-2 ring-cyan-300/70' : ''
-      }`}
+    <Card
+      variant="success"
+      accent="#22d3ee"
+      title={edited.title || 'Untitled habit'}
+      meta={statusLabel}
+      interactive
+      selected={isEditing}
       onClick={handleCardClick}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="text-sm sm:text-base font-semibold text-slate-900">
-          {edited.title || 'Untitled habit'}
+      <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-text/80">
+        <div className="font-semibold text-emerald-700">XP {edited.xpValue ?? 0}</div>
+        <div className="text-xs uppercase tracking-wide text-text/60">
+          Streak: <span className="font-semibold text-text">{edited.streak ?? 0}</span>
         </div>
-
-        <span className="inline-flex items-center rounded-full border border-cyan-300/80 bg-cyan-50/70 px-2 py-0.5 text-[11px] uppercase tracking-wide text-cyan-700">
-          {statusLabel}
-        </span>
-      </div>
-
-      <div className="mt-1 flex flex-wrap items-center gap-3 text-sm text-slate-700">
-        <div className="font-semibold text-cyan-700">XP {edited.xpValue ?? 0}</div>
-        <div className="text-xs uppercase tracking-wide text-slate-500">
-          Streak: <span className="font-semibold text-slate-700">{edited.streak ?? 0}</span>
-        </div>
-        {edited.cadence ? <div className="text-xs text-slate-500">Cadence: {edited.cadence}</div> : null}
+        {edited.cadence ? <div className="text-xs text-text/60">Cadence: {edited.cadence}</div> : null}
       </div>
 
       {!isEditing && edited.description ? (
-        <p className="text-sm text-slate-700">{edited.description}</p>
+        <p className="text-sm text-text/80">{edited.description}</p>
       ) : null}
 
       {isEditing && (
@@ -128,6 +119,6 @@ export default function HabitCard({ habit: habitProp, card, isNew: isNewProp = f
           </div>
         </>
       )}
-    </div>
+    </Card>
   );
 }

@@ -3,13 +3,13 @@ import SectionBand from '@/components/Surface/SectionBand';
 import PrimaryButton from '@/components/ui/PrimaryButton';
 import GhostButton from '@/components/ui/GhostButton';
 import Chip from '@/components/ui/Chip';
-import HomeInfoCard from '@/modules/home/HomeInfoCard';
+import Card from '@/components/CardKit/Card';
 
 const STEPS = [
   {
     title: 'Frame the day',
     copy:
-      "Pick the quests, habits, and rituals that matter now. Your HUD locks today’s priorities into a simple plan.",
+      "Pick the quests, habits, and rituals that matter now. Your HUD locks today's priorities into a simple plan.",
   },
   {
     title: 'Equip your kit',
@@ -55,9 +55,13 @@ const PROOF_POINTS = [
   {
     title: 'Make progress visible',
     copy:
-      "XP turns invisible reps into honest movement—toward meaningful launches, revenue, reputation, and mastery.",
+      "XP turns invisible reps into honest movement-toward meaningful launches, revenue, reputation, and mastery.",
   },
 ];
+
+const STEP_ACCENTS = ['#22d3ee', '#fbbf24', '#22c55e'];
+const FEATURE_ACCENTS = ['#60a5fa', '#a78bfa', '#34d399'];
+const PROOF_ACCENTS = ['#fb7185', '#f59e0b', '#38bdf8'];
 
 export default function Home() {
   return (
@@ -121,15 +125,16 @@ function HowItWorksSection() {
           </p>
         </div>
         <div className="grid gap-6 sm:grid-cols-3">
-          {STEPS.map((step) => (
-            <HomeInfoCard
+          {STEPS.map((step, idx) => (
+            <Card
               key={step.title}
-              block={{
-                title: step.title,
-                body: <p className="mt-3 text-sm text-text/75">{step.copy}</p>,
-              }}
+              title={step.title}
+              variant="neutral"
+              accent={STEP_ACCENTS[idx % STEP_ACCENTS.length]}
               className="h-full text-left [&_h3]:text-lg"
-            />
+            >
+              <p className="mt-3 text-sm text-text/75">{step.copy}</p>
+            </Card>
           ))}
         </div>
       </div>
@@ -153,15 +158,16 @@ function FeaturesSection() {
           </p>
         </div>
         <div className="grid gap-6 sm:grid-cols-3">
-          {FEATURES.map((feature) => (
-            <HomeInfoCard
+          {FEATURES.map((feature, idx) => (
+            <Card
               key={feature.title}
-              block={{
-                title: feature.title,
-                body: <p className="mt-3 text-sm text-text/75">{feature.copy}</p>,
-              }}
+              title={feature.title}
+              variant="neutral"
+              accent={FEATURE_ACCENTS[idx % FEATURE_ACCENTS.length]}
               className="h-full text-left transition hover:-translate-y-1 [&_h3]:text-lg"
-            />
+            >
+              <p className="mt-3 text-sm text-text/75">{feature.copy}</p>
+            </Card>
           ))}
         </div>
       </div>
@@ -185,15 +191,16 @@ function ProofSection() {
           </p>
         </div>
         <div className="grid gap-6 sm:grid-cols-3">
-          {PROOF_POINTS.map((point) => (
-            <HomeInfoCard
+          {PROOF_POINTS.map((point, idx) => (
+            <Card
               key={point.title}
-              block={{
-                title: point.title,
-                body: <p className="mt-2 text-sm text-text/75">{point.copy}</p>,
-              }}
+              title={point.title}
+              variant="neutral"
+              accent={PROOF_ACCENTS[idx % PROOF_ACCENTS.length]}
               className="h-full text-left [&_h3]:text-base"
-            />
+            >
+              <p className="mt-2 text-sm text-text/75">{point.copy}</p>
+            </Card>
           ))}
         </div>
       </div>

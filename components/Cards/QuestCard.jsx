@@ -1,10 +1,8 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { baseCardClasses, hoverClasses, cardAccents } from './cardChrome';
+import Card from '@/components/CardKit/Card';
 import CardEditor from './CardEditor';
-
-const questAccent = cardAccents.quest || 'border-amber-300/70';
 
 function normalizeEdited(quest = {}) {
   return {
@@ -78,35 +76,17 @@ export default function QuestCard({ quest, isNew: isNewProp = false, onSaved, on
   const isEditing = mode === 'edit';
 
   return (
-    <div
-      className={`${baseCardClasses} ${questAccent} ${hoverClasses} ${
-        isEditing ? 'ring-2 ring-amber-300/80' : ''
-      }`}
+    <Card
+      variant="warning"
+      accent="#fbbf24"
+      title={edited.title || 'Untitled quest'}
+      meta={statusLabel}
+      interactive
+      selected={isEditing}
       onClick={handleCardClick}
-    >
-      <div className="flex items-start justify-between gap-3">
-        <div className="text-sm sm:text-base font-semibold text-slate-900">
-          {edited.title || 'Untitled quest'}
-        </div>
-
-        <span className="inline-flex items-center rounded-full border border-amber-300/80 bg-amber-50/70 px-2 py-0.5 text-[11px] uppercase tracking-wide text-amber-700">
-          {statusLabel}
-        </span>
-      </div>
-
-      <div className="mt-1 flex items-center justify-between gap-3 text-sm text-slate-600">
-        <div className="font-semibold text-amber-700">XP {edited.xpValue ?? 0}</div>
-        {edited.projectName ? <div className="text-xs text-slate-500">Project: {edited.projectName}</div> : null}
-      </div>
-
-      {!isEditing && edited.description ? (
-        <p className="text-sm text-slate-700">{edited.description}</p>
-      ) : null}
-
-      {isEditing && (
-        <>
-          <CardEditor type="quest" value={edited} onChange={setEdited} />
-          <div className="mt-4 flex justify-end gap-2">
+      footer={
+        isEditing ? (
+          <div className="flex justify-end gap-2">
             <button
               type="button"
               className="rounded-full border border-slate-200 bg-white/80 px-3 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50"
@@ -122,8 +102,19 @@ export default function QuestCard({ quest, isNew: isNewProp = false, onSaved, on
               Save
             </button>
           </div>
-        </>
-      )}
-    </div>
+        ) : null
+      }
+    >
+      <div className="mt-1 flex items-center justify-between gap-3 text-sm text-text/70">
+        <div className="font-semibold text-amber-700">XP {edited.xpValue ?? 0}</div>
+        {edited.projectName ? <div className="text-xs text-text/60">Project: {edited.projectName}</div> : null}
+      </div>
+
+      {!isEditing && edited.description ? (
+        <p className="text-sm text-text/80">{edited.description}</p>
+      ) : null}
+
+      {isEditing && <CardEditor type="quest" value={edited} onChange={setEdited} />}
+    </Card>
   );
 }

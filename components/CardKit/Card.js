@@ -25,7 +25,7 @@ const Card = forwardRef(function Card(
   },
   ref
 ) {
-  const { containerClass, ringClass, ringStyle, contentClass } = useCardChrome({
+  const { containerClass, ringClass, ringStyle, contentClass, accentColor, accentSoft } = useCardChrome({
     variant,
     accent,
     compact,
@@ -42,7 +42,11 @@ const Card = forwardRef(function Card(
       className={containerClass}
       onClick={interactive ? onClick : undefined}
       role={computedRole}
-      style={style}
+      style={{
+        '--card-accent': accentColor,
+        '--card-accent-soft': accentSoft,
+        ...style,
+      }}
       {...rest}
     >
       {ringClass ? <span aria-hidden className={ringClass} style={ringStyle ?? undefined} /> : null}

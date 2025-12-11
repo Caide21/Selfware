@@ -15,6 +15,11 @@ import Chip from '@/components/ui/Chip';
  * @property {string|null} screenshot_url
  * @property {string|null} notes
  * @property {string} created_at
+ * @property {number|null} [self_state]
+ * @property {'chill' | 'neutral' | 'needy' | 'complaining' | 'angry' | null} [table_vibe]
+ * @property {'low' | 'medium' | 'high' | null} [system_load]
+ * @property {'none' | 'self' | 'kitchen' | 'bar' | 'mixed' | null} [issue_source]
+ * @property {'solo' | 'couple' | 'family' | 'friends' | 'work' | 'other' | null} [group_type]
  */
 
 function formatCurrency(amount) {
@@ -38,6 +43,16 @@ function formatDateTime(value) {
 export default function WaiterTableCard({ table, onEdit, onDelete }) {
   const tipPct =
     table.bill_total > 0 ? ((Number(table.tip_amount || 0) / Number(table.bill_total)) * 100).toFixed(1) : null;
+
+  const experienceSummary = (() => {
+    const parts = [];
+    if (table.self_state != null) parts.push(`State: ${table.self_state}`);
+    if (table.table_vibe) parts.push(`Vibe: ${table.table_vibe}`);
+    if (table.system_load) parts.push(`Load: ${table.system_load}`);
+    if (table.issue_source) parts.push(`Source: ${table.issue_source}`);
+    if (table.group_type) parts.push(`Group: ${table.group_type}`);
+    return parts.length ? parts.join(' • ') : null;
+  })();
 
   const paymentLabel =
     table.payment_method === 'cash'
@@ -66,6 +81,8 @@ export default function WaiterTableCard({ table, onEdit, onDelete }) {
             {tipPct ? <span className="ml-2 text-xs text-text/70">({tipPct}%)</span> : null}
           </span>
         </div>
+
+        {experienceSummary ? <p className="text-xs text-text/70">{experienceSummary}</p> : null}
 
         {table.notes ? <p className="text-sm text-text/80 whitespace-pre-line">{table.notes}</p> : null}
 

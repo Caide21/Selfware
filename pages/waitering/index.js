@@ -22,6 +22,11 @@ const initialTableForm = {
   payment_method: 'card',
   screenshotFile: null,
   notes: '',
+  self_state: '',
+  table_vibe: '',
+  system_load: '',
+  issue_source: '',
+  group_type: '',
 };
 
 function formatShiftDate(dateString) {
@@ -230,6 +235,92 @@ export default function WaiteringPage() {
     setPastShifts(shifts.map((s) => ({ ...s, tables: tablesByShift[s.id] || [] })));
   }
 
+  async function handleGenerateReport() {
+    if (!selectedShift || !user) {
+      alert('Select a shift first');
+      return;
+    }
+
+    // Get the tables for the selected shift if not already loaded
+    let tablesForReport = tables;
+    if (selectedShift.id !== activeShift?.id && selectedShift.tables) {
+      // For past shifts, use the tables already loaded with the shift
+      tablesForReport = selectedShift.tables;
+    }
+
+    // Compute summary for this specific shift
+    const summary = computeShiftSummary(selectedShift, tablesForReport, nowTs);
+
+    // Prepare the report structure
+    const report = {
+      shift: {
+        id: selectedShift.id,
+        status: selectedShift.status,
+        branch: selectedShift.branch || DEFAULT_BRANCH,
+        start_time: selectedShift.start_time,
+        end_time: selectedShift.end_time,
+        created_at: selectedShift.created_at,
+        updated_at: selectedShift.updated_at,
+      },
+      
+      summary: {
+        duration_hours: summary.durationHours,
+        duration_formatted: formatDurationHours(summary.durationHours),
+        tables_count: summary.tablesCount,
+        guests_total: summary.guestsTotal,
+        turnover_total: summary.turnoverTotal,
+        turnover_formatted: formatCurrency(summary.turnoverTotal),
+        tips_total: summary.tipsTotal,
+        tips_formatted: formatCurrency(summary.tipsTotal),
+        tip_percentage: summary.tipPct != null ? summary.tipPct.toFixed(1) + '%' : '--',
+        tips_per_hour: summary.tipsPerHour != null ? formatCurrency(summary.tipsPerHour) : '--',
+      },
+      
+      tables: tablesForReport.map(table => ({
+        id: table.id,
+        table_number: table.table_number,
+        guests: table.guests,
+        bill_total: table.bill_total,
+        bill_total_formatted: formatCurrency(table.bill_total),
+        tip_amount: table.tip_amount,
+        tip_amount_formatted: formatCurrency(table.tip_amount),
+        tip_percentage: table.bill_total > 0 ? 
+          ((Number(table.tip_amount || 0) / Number(table.bill_total)) * 100).toFixed(1) + '%' : 
+          '0%',
+        payment_method: table.payment_method,
+        notes: table.notes,
+        created_at: table.created_at,
+        self_state: table.self_state,
+        table_vibe: table.table_vibe,
+        system_load: table.system_load,
+        issue_source: table.issue_source,
+        group_type: table.group_type,
+        screenshot_url: table.screenshot_url,
+      })),
+      
+      report_generated_at: new Date().toISOString(),
+      report_generated_by: user?.id || 'unknown',
+    };
+
+    // Create a downloadable JSON file
+    const jsonString = JSON.stringify(report, null, 2);
+    const blob = new Blob([jsonString], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    
+    // Create a filename based on shift date
+    const shiftDate = formatShiftDate(selectedShift.start_time).replace(/[,\s]/g, '_');
+    const filename = `waiter_shift_report_${shiftDate}.json`;
+    
+    // Trigger download
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
   async function handleStartShift() {
     if (!user) {
       alert('Sign in required');
@@ -319,6 +410,11 @@ export default function WaiteringPage() {
       payment_method: table.payment_method || 'card',
       screenshotFile: null,
       notes: table.notes || '',
+      self_state: table.self_state != null ? String(table.self_state) : '',
+      table_vibe: table.table_vibe || '',
+      system_load: table.system_load || '',
+      issue_source: table.issue_source || '',
+      group_type: table.group_type || '',
     });
     setFileInputKey((k) => k + 1);
     addFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -336,15 +432,29 @@ export default function WaiteringPage() {
       alert('Select a shift first');
       return;
     }
-    if (!editingTable && selectedShift.status !== 'active') {
-      alert('Only active shifts can accept new tables.');
+
+    if (!editingTable && !['active', 'completed'].includes(selectedShift.status)) {
+      alert('You can only add tables for active or completed shifts.');
       return;
     }
     setAddingTable(true);
     setLoadError(null);
     let screenshotUrl = editingTable?.screenshot_url ?? null;
     try {
-      const { screenshotFile, table_number, guests, bill_total, tip_amount, payment_method, notes } = tableForm;
+      const {
+        screenshotFile,
+        table_number,
+        guests,
+        bill_total,
+        tip_amount,
+        payment_method,
+        notes,
+        self_state,
+        table_vibe,
+        system_load,
+        issue_source,
+        group_type,
+      } = tableForm;
 
       if (screenshotFile) {
         const filePath = `${user.id}/${selectedShift.id}/${
@@ -360,6 +470,10 @@ export default function WaiteringPage() {
         screenshotUrl = null;
       }
 
+      const parsedSelfState = Number(self_state);
+      const selfStateValue =
+        Number.isFinite(parsedSelfState) && parsedSelfState >= 1 && parsedSelfState <= 5 ? parsedSelfState : null;
+
       const payload = {
         user_id: user.id,
         shift_id: selectedShift.id,
@@ -370,6 +484,11 @@ export default function WaiteringPage() {
         payment_method: payment_method || 'card',
         screenshot_url: screenshotUrl,
         notes: notes?.trim() || null,
+        self_state: selfStateValue,
+        table_vibe: table_vibe || null,
+        system_load: system_load || null,
+        issue_source: issue_source || null,
+        group_type: group_type || null,
       };
 
       if (editingTable) {
@@ -383,6 +502,11 @@ export default function WaiteringPage() {
             payment_method: payload.payment_method,
             screenshot_url: payload.screenshot_url,
             notes: payload.notes,
+            self_state: payload.self_state,
+            table_vibe: payload.table_vibe,
+            system_load: payload.system_load,
+            issue_source: payload.issue_source,
+            group_type: payload.group_type,
           })
           .eq('id', editingTable.id)
           .eq('user_id', user.id);
@@ -589,12 +713,12 @@ export default function WaiteringPage() {
                       {selectedSummary ? ` - ${formatDurationHours(selectedSummary.durationHours)}` : ''}
                     </div>
                   </div>
-                  {selectedShift.status === 'active' ? (
+                  {['active', 'completed'].includes(selectedShift.status) ? (
                     <button
                       className="rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-text shadow-sm hover:bg-slate-50"
-                      onClick={() => addFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                      onClick={handleGenerateReport}
                     >
-                      + Add table
+                      Generate report
                     </button>
                   ) : null}
                 </div>
@@ -620,7 +744,7 @@ export default function WaiteringPage() {
                   </div>
                 ) : null}
 
-                {selectedShift.status === 'active' || editingTable ? (
+                {selectedShift ? (
                   <div ref={addFormRef}>
                     <Card
                       variant="neutral"
@@ -715,6 +839,125 @@ export default function WaiteringPage() {
                             </label>
                           </div>
                         ) : null}
+                        <div className="space-y-3 rounded-lg border border-slate-200 bg-white/70 p-3">
+                          <div className="flex items-center justify-between gap-3">
+                            <div>
+                              <div className="text-sm font-semibold text-text">Experience tags</div>
+                              <div className="text-xs text-text/70">Optional context for the interaction.</div>
+                            </div>
+                            <button
+                              type="button"
+                              className="text-xs font-semibold text-text/70 underline-offset-2 hover:underline"
+                              onClick={() =>
+                                setTableForm((prev) => ({
+                                  ...prev,
+                                  self_state: '',
+                                  table_vibe: '',
+                                  system_load: '',
+                                  issue_source: '',
+                                  group_type: '',
+                                }))
+                              }
+                            >
+                              Clear tags
+                            </button>
+                          </div>
+                          <div className="grid gap-3 md:grid-cols-2">
+                            <div className="md:col-span-2 space-y-2">
+                              <div className="flex items-center justify-between gap-3">
+                                <span className="text-sm font-medium text-text">Your state (1 = dead, 5 = laser)</span>
+                                <button
+                                  type="button"
+                                  className="text-xs font-semibold text-text/70 underline-offset-2 hover:underline"
+                                  onClick={() => setTableForm((prev) => ({ ...prev, self_state: '' }))}
+                                >
+                                  Clear
+                                </button>
+                              </div>
+                              <div className="flex flex-wrap gap-2">
+                                {[1, 2, 3, 4, 5].map((value) => (
+                                  <label
+                                    key={value}
+                                    className={`flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1 text-sm font-semibold shadow-sm ${
+                                      tableForm.self_state === String(value)
+                                        ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
+                                        : 'border-slate-200 bg-white text-text'
+                                    }`}
+                                  >
+                                    <input
+                                      type="radio"
+                                      name="self_state"
+                                      value={value}
+                                      checked={tableForm.self_state === String(value)}
+                                      onChange={(e) => setTableForm((prev) => ({ ...prev, self_state: e.target.value }))}
+                                      className="hidden"
+                                    />
+                                    {value}
+                                  </label>
+                                ))}
+                              </div>
+                            </div>
+                            <label className="block space-y-1">
+                              <span className="block text-sm font-medium text-text">Guest vibe</span>
+                              <select
+                                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-text focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                value={tableForm.table_vibe}
+                                onChange={(e) => setTableForm((prev) => ({ ...prev, table_vibe: e.target.value }))}
+                              >
+                                <option value="">No selection</option>
+                                <option value="chill">chill</option>
+                                <option value="neutral">neutral</option>
+                                <option value="needy">needy</option>
+                                <option value="complaining">complaining</option>
+                                <option value="angry">angry</option>
+                              </select>
+                            </label>
+                            <label className="block space-y-1">
+                              <span className="block text-sm font-medium text-text">System load</span>
+                              <select
+                                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-text focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                value={tableForm.system_load}
+                                onChange={(e) => setTableForm((prev) => ({ ...prev, system_load: e.target.value }))}
+                              >
+                                <option value="">No selection</option>
+                                <option value="low">low</option>
+                                <option value="medium">medium</option>
+                                <option value="high">high</option>
+                              </select>
+                            </label>
+                            <label className="block space-y-1">
+                              <span className="block text-sm font-medium text-text">Main issue source</span>
+                              <select
+                                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-text focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                value={tableForm.issue_source}
+                                onChange={(e) => setTableForm((prev) => ({ ...prev, issue_source: e.target.value }))}
+                              >
+                                <option value="">No selection</option>
+                                <option value="none">none</option>
+                                <option value="self">self</option>
+                                <option value="kitchen">kitchen</option>
+                                <option value="bar">bar</option>
+                                <option value="mixed">mixed</option>
+                              </select>
+                            </label>
+                            <label className="block space-y-1">
+                              <span className="block text-sm font-medium text-text">Group type</span>
+                              <select
+                                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-text focus:outline-none focus:ring-2 focus:ring-primary/40"
+                                value={tableForm.group_type}
+                                onChange={(e) => setTableForm((prev) => ({ ...prev, group_type: e.target.value }))}
+                              >
+                                <option value="">No selection</option>
+                                <option value="solo">solo</option>
+                                <option value="couple">couple</option>
+                                <option value="family">family</option>
+                                <option value="friends">friends</option>
+                                <option value="work">work</option>
+                                <option value="other">other</option>
+                              </select>
+                            </label>
+                          </div>
+                        </div>
                         <TextAreaAuto
                           label="Notes"
                           placeholder="Special requests, comps, etc."

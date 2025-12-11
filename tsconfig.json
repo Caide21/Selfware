@@ -1,0 +1,57 @@
+{
+  "compilerOptions": {
+    // Modern output so Next can tree-shake nicely
+    "target": "ESNext",
+    "lib": ["dom", "dom.iterable", "esnext"],
+
+    // Let you keep using .js/.jsx during migration
+    "allowJs": true,
+    "skipLibCheck": true,
+
+    // Keep strict off for now while you migrate; you can flip this later
+    "strict": false,
+    "strictNullChecks": true,
+
+    // Next handles emitting; TS just type-checks
+    "noEmit": true,
+    "incremental": true,
+
+    "module": "esnext",
+    // Recommended for Next 13+ / 14, plays nicely with the bundler
+    "moduleResolution": "bundler",
+
+    "esModuleInterop": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+
+    // ✅ Enable JSX in .tsx/.jsx
+    "jsx": "preserve",
+
+    // ✅ Path aliases
+    "baseUrl": ".",
+    "paths": {
+      // more specific aliases first
+      "@/components/*": ["components/*", "src/components/*"],
+      "@/lib/*": ["lib/*", "src/lib/*"],
+      "@/*": ["src/*"]
+    },
+
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ]
+  },
+  "include": [
+    "**/*.js",
+    "**/*.jsx",
+    "**/*.ts",
+    "**/*.tsx",
+    "components",
+    "next-env.d.ts",
+    "pages",
+    "src",
+    ".next/types/**/*.ts"
+  ],
+  "exclude": ["node_modules"]
+}

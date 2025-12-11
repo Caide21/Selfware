@@ -1,14 +1,14 @@
-import { baseCardClasses, hoverClasses } from './cardChrome';
+import Card from '@/components/CardKit/Card';
 
 export default function RitualCard({ card, ritual }) {
   const data = card || ritual || {};
 
   return (
-    <div className={`${baseCardClasses} border-indigo-300/80 ${hoverClasses}`}>
-      <div className="text-sm font-semibold text-indigo-700">{data.title}</div>
-      <div className="text-xs text-slate-600">
-        Steps: <span className="font-medium text-indigo-600">{data.stepCount ?? 0}</span>
-      </div>
-    </div>
+    <Card
+      variant="info"
+      accent="#818cf8"
+      title={data.title || 'Ritual'}
+      meta={data.stepCount != null ? `Steps: ${data.stepCount}` : undefined}
+    />
   );
 }

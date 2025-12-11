@@ -1,12 +1,11 @@
-import { baseCardClasses, hoverClasses } from './cardChrome';
+import HomeInfoCard from '@/modules/home/HomeInfoCard';
 
-export default function HomeCard({ card }) {
+export default function HomeCard({ card, ...rest }) {
   const data = card || {};
-
   return (
-    <div className={`${baseCardClasses} border-lime-300/80 ${hoverClasses}`}>
-      <div className="text-sm font-semibold text-emerald-800">{data.label}</div>
-      {data.placeType ? <div className="text-xs text-slate-600">{data.placeType}</div> : null}
-    </div>
+    <HomeInfoCard
+      block={{ title: data.label, subtitle: data.placeType, body: null }}
+      {...rest}
+    />
   );
 }

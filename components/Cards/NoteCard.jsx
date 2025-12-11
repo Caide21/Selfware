@@ -1,12 +1,11 @@
-import { baseCardClasses, hoverClasses } from './cardChrome';
+import Card from '@/components/CardKit/Card';
 
 export default function NoteCard({ card, note }) {
   const data = card || note || {};
 
   return (
-    <div className={`${baseCardClasses} border-slate-300/80 ${hoverClasses}`}>
-      {data.title ? <div className="text-sm font-semibold text-slate-900">{data.title}</div> : null}
-      {data.body ? <div className="text-sm text-slate-600">{data.body}</div> : null}
-    </div>
+    <Card variant="neutral" title={data.title} accent="#94a3b8">
+      {data.body ? <div className="text-sm text-text/70 whitespace-pre-line">{data.body}</div> : null}
+    </Card>
   );
 }

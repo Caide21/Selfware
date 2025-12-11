@@ -32,6 +32,8 @@ function resolveAccentStops(accent, variant) {
     if (prismByVariant[trimmed]) {
       return accentFromVariant(trimmed);
     }
+    // Treat any other color string as a flat gradient with that color
+    return [trimmed, trimmed];
   }
 
   return accentFromVariant(variant);
@@ -45,9 +47,22 @@ export function useCardChrome({
   selected = false,
   className = '',
 }) {
+  if (process.env.NODE_ENV === 'development') {
+    // TEMP: debug to see where CardKit is used
+    // eslint-disable-next-line no-console
+    console.log('[CardKit] useCardChrome', { variant, accent, compact, interactive, selected, className });
+  }
+
   return useMemo(() => {
     const variantClass = cardTokens.variants[variant] ?? cardTokens.variants.neutral;
     const paddingClass = compact ? 'p-3' : 'p-4';
+
+    const accentStops = resolveAccentStops(accent, variant);
+    const accentHex =
+      (Array.isArray(accentStops) && accentStops.length && accentStops[0]) ||
+      (accentFromVariant(variant)?.[0] ?? '#60a5fa');
+    const accentSoft =
+      accentHex && accentHex.startsWith('#') && accentHex.length === 7 ? `${accentHex}99` : accentHex || '#60a5fa99';
 
     const baseClasses = [
       'relative isolate overflow-hidden',
@@ -55,22 +70,23 @@ export function useCardChrome({
       cardTokens.radius,
       paddingClass,
       'border border-white/10 dark:border-white/10',
-      'shadow-[0_10px_28px_-18px_rgba(15,23,42,0.55)] dark:shadow-[0_12px_34px_-20px_rgba(0,0,0,0.75)]',
       cardTokens.chrome.base,
+      'card-glow',
       interactive && cardTokens.chrome.focus,
       interactive && 'focus-visible:outline-none',
       selected && cardTokens.chrome.selected,
+      'transition-transform transition-shadow',
+      'hover:scale-[1.02] focus-visible:scale-[1.02]',
       className,
     ]
       .filter(Boolean)
       .join(' ');
 
-    const accentStops = resolveAccentStops(accent, variant);
     const ringClass = accentStops ? 'pointer-events-none absolute inset-0 rounded-[inherit]' : null;
     const ringStyle = accentStops
       ? {
           backgroundImage: `linear-gradient(135deg, ${accentStops.join(', ')})`,
-          opacity: selected ? 0.85 : 0.65,
+          opacity: selected ? 0.9 : 0.7,
           padding: '2px',
           borderRadius: 'inherit',
           boxSizing: 'border-box',
@@ -91,6 +107,8 @@ export function useCardChrome({
       ringClass,
       ringStyle,
       contentClass,
+      accentColor: accentHex,
+      accentSoft,
     };
   }, [variant, accent, compact, interactive, selected, className]);
 }
