@@ -21,7 +21,7 @@
     "deno": "^2.4.4",
     "konva": "^9.3.20",
     "lucide-react": "^0.544.0",
-    "next": "^15.3.0",
+    "next": "15.5.9",
     "next-absolute-url": "^1.2.2",
     "nanoid": "^3.3.11",
     "papaparse": "^5.5.3",
