@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import SkillCard from "../Cards/SkillCard";
+import SkillCard from "@/components/CardKit/cards/SkillCard";
 
 export default function SkillMap() {
   const [skills, setSkills] = useState([]);

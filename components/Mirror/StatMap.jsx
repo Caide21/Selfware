@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import StatCard from "../Cards/StatCard";
+import StatCard from "@/components/CardKit/cards/StatCard";
 import SectionHeading from "../SectionHeading";
 
 const categoryMetadata = {

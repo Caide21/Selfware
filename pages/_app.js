@@ -5,9 +5,6 @@ import '../styles/enchantments.css';
 import '../styles/prism-paper.css';
 
 import PageShell from '../components/Layout/PageShell';
-import Nav from '../components/Layout/Nav';
-import { assertSupabaseEnv } from '@/lib/supabaseEnvGuard';
-
 import { useEffect } from 'react';
 import Head from 'next/head';
 import { initERS } from '../utils/plugins/ers/ersBehaviorTracker';
@@ -20,7 +17,6 @@ export default function App({ Component, pageProps }) {
      When state flips to ACTIVE, onFeedback will start firing.
   ----------------------------------------------------------------*/
   useEffect(() => {
-    assertSupabaseEnv();
     initERS({
       // (Optional) backend endpoint to stream events
       endpoint: '/api/classify',
@@ -42,7 +38,6 @@ export default function App({ Component, pageProps }) {
       <Head>
         <meta name="theme-color" content="#FFFFFF" />
       </Head>
-      <Nav />
       <Component {...pageProps} />
     </PageShell>
   );

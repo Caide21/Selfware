@@ -3,7 +3,7 @@ import { useMemo, useRef, useState } from 'react';
 import { usePageHeading } from '@/components/Layout/PageShell';
 import SectionHeading from '@/components/SectionHeading';
 import InfiniteCanvas from '@/components/Canvas/InfiniteCanvas';
-import BookCard from '@/components/Cards/BookCard';
+import BookCard from '@/components/CardKit/cards/BookCard';
 
 const FALLBACK_IMG = '/neural-web.png';
 

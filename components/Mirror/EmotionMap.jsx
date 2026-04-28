@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import EmotionCard from "../Cards/EmotionCard";
+import EmotionCard from "@/components/CardKit/cards/EmotionCard";
 
 export default function EmotionMap() {
   const [state, setState] = useState(null);

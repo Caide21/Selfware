@@ -1,9 +1,9 @@
 // pages/quests/index.js
 import React, { useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
-import QuestCard from '@/components/Cards/QuestCard';
+import QuestCard from '@/components/CardKit/cards/QuestCard';
 import { usePageHeading } from '../../components/Layout/PageShell';
-import { fetchQuests as apiFetchQuests, createQuest, updateQuest } from '@/components/Quests';
+import { fetchQuests as apiFetchQuests, createQuest, updateQuest, moveQuest } from '@/components/Quests';
 
 const PAGE_HEADING = {
   emoji: '',
@@ -19,10 +19,12 @@ function mapQuestRowToCard(quest) {
     xpValue: quest.xp_value ?? 0,
     projectName: quest.project_name ?? null,
     description: quest.extra_info ?? quest.description ?? '',
+    category: quest.category ?? 'side',
+    parent_id: quest.parent_id ?? null,
   };
 }
 
-function createBlankQuestForLane(lane = 'side') {
+function createBlankQuestForLane(lane = 'main') {
   const tempId = typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(16).slice(2);
   return {
     id: `temp-${tempId}`,
@@ -32,6 +34,7 @@ function createBlankQuestForLane(lane = 'side') {
     extra_info: '',
     category: lane,
     parent_id: null,
+    order_index: 0,
     isNew: true,
   };
 }
@@ -44,8 +47,8 @@ export default function QuestsPage() {
 
   usePageHeading(PAGE_HEADING);
 
-  function handleAddQuest(lane = 'side') {
-    setQuests((prev) => [...prev, createBlankQuestForLane(lane)]);
+  function handleAddQuest(lane = 'main') {
+    setQuests((prev) => [createBlankQuestForLane(lane), ...prev]);
   }
 
   const childrenMap = useMemo(() => {
@@ -58,6 +61,60 @@ export default function QuestsPage() {
     }
     return m;
   }, [quests]);
+
+  const descendantsMap = useMemo(() => {
+    const cache = new Map();
+    const visiting = new Set();
+    const getDescendants = (id) => {
+      if (visiting.has(id)) return new Set();
+      if (cache.has(id)) return cache.get(id);
+      visiting.add(id);
+      const kids = childrenMap.get(id) || [];
+      const set = new Set();
+      for (const kidId of kids) {
+        set.add(kidId);
+        const sub = getDescendants(kidId);
+        for (const subId of sub) set.add(subId);
+      }
+      cache.set(id, set);
+      visiting.delete(id);
+      return set;
+    };
+
+    const map = new Map();
+    for (const q of quests) {
+      map.set(q.id, getDescendants(q.id));
+    }
+    return map;
+  }, [quests, childrenMap]);
+
+  function formatQuestLabel(q) {
+    const title = q.title?.trim() ? q.title.trim() : 'Untitled quest';
+    const categoryLabel = q.category ? q.category.charAt(0).toUpperCase() + q.category.slice(1) : 'Unknown';
+    return `${title} - ${categoryLabel}`;
+  }
+
+  function getAttachOptions(currentId) {
+    const blocked = new Set(descendantsMap.get(currentId) || []);
+    blocked.add(currentId);
+    return quests
+      .filter((q) => !blocked.has(q.id) && !q.isNew && !String(q.id).startsWith('temp-'))
+      .map((q) => ({ value: q.id, label: formatQuestLabel(q) }));
+  }
+
+  const baseMoveOptions = [
+    { value: 'main', label: 'Main (top level)' },
+    { value: 'side', label: 'Side (top level)' },
+    { value: 'inactive', label: 'Inactive (top level)' },
+  ];
+
+  function buildMoveOptions(quest) {
+    if (quest.parent_id) {
+      const categoryLabel = quest.category ? quest.category.charAt(0).toUpperCase() + quest.category.slice(1) : 'current lane';
+      return [{ value: 'detach', label: `Detach (keep ${categoryLabel})` }, ...baseMoveOptions];
+    }
+    return baseMoveOptions;
+  }
 
   useEffect(() => {
     let active = true;
@@ -105,6 +162,35 @@ export default function QuestsPage() {
               <QuestCard
                 quest={mapQuestRowToCard(child)}
                 isNew={child.isNew}
+                moveOptions={buildMoveOptions(child)}
+                attachOptions={getAttachOptions(child.id)}
+                onMove={async (value) => {
+                  try {
+                    const targetCategory = value === 'detach' ? child.category || 'side' : value;
+                    await moveQuest({
+                      id: child.id,
+                      targetParentId: null,
+                      targetCategory,
+                    });
+                    await reloadQuests();
+                  } catch (error) {
+                    setActionError(error.message || 'Move failed');
+                  }
+                }}
+                onAttach={async (parentId) => {
+                  try {
+                    const parent = quests.find((q) => q.id === parentId);
+                    const targetCategory = parent?.category || child.category || 'side';
+                    await moveQuest({
+                      id: child.id,
+                      targetParentId: parentId,
+                      targetCategory,
+                    });
+                    await reloadQuests();
+                  } catch (error) {
+                    setActionError(error.message || 'Attach failed');
+                  }
+                }}
                 onSaved={async (payload, { isNew }) => {
                   try {
                     if (isNew) {
@@ -148,6 +234,35 @@ export default function QuestsPage() {
                 <QuestCard
                   quest={mapQuestRowToCard(q)}
                   isNew={q.isNew}
+                  moveOptions={buildMoveOptions(q)}
+                  attachOptions={getAttachOptions(q.id)}
+                  onMove={async (value) => {
+                    try {
+                      const targetCategory = value === 'detach' ? q.category || 'side' : value;
+                      await moveQuest({
+                        id: q.id,
+                        targetParentId: null,
+                        targetCategory,
+                      });
+                      await reloadQuests();
+                    } catch (error) {
+                      setActionError(error.message || 'Move failed');
+                    }
+                  }}
+                  onAttach={async (parentId) => {
+                    try {
+                      const parent = quests.find((qq) => qq.id === parentId);
+                      const targetCategory = parent?.category || q.category || 'side';
+                      await moveQuest({
+                        id: q.id,
+                        targetParentId: parentId,
+                        targetCategory,
+                      });
+                      await reloadQuests();
+                    } catch (error) {
+                      setActionError(error.message || 'Attach failed');
+                    }
+                  }}
                   onSaved={async (payload, { isNew }) => {
                     try {
                       if (isNew) {
@@ -157,6 +272,7 @@ export default function QuestsPage() {
                           xp_value: payload.xp_value,
                           extraInfo: payload.extra_info,
                           category: lane,
+                          orderIndex: lane === 'main' ? 0 : null,
                         });
                       } else {
                         await updateQuest(q.id, payload);
@@ -193,7 +309,7 @@ export default function QuestsPage() {
       <div className="mx-auto max-w-6xl">
         <div className="mb-6 flex items-center justify-between">
           <button
-            onClick={() => handleAddQuest('side')}
+            onClick={() => handleAddQuest('main')}
             className="rounded-xl px-3 py-2 border border-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800"
           >
             Add Quest

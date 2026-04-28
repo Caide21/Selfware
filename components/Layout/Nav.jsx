@@ -5,6 +5,7 @@ import AuthStatus from '../nav/AuthStatus';
 import NavBar from '../NavBar';
 
 const NAV_LINKS = [
+  { href: '/character-portal', label: 'Character Portal' },
   { href: '/mind-arsenal', label: 'Mind Arsenal' },
   { href: '/loadouts', label: 'Loadouts' },
   { href: '/status_panel', label: 'Status Panel' },
@@ -47,7 +48,7 @@ export default function Nav() {
   }, []);
 
   return (
-    <nav className="z-50 px-4 pt-4 sm:px-6">
+    <nav className="z-50">
       <NavBar>
         <div className="flex items-center justify-between gap-4 sm:gap-6">
           <Link href="/home" className="flex items-center gap-2 text-lg font-semibold text-text">
@@ -64,7 +65,7 @@ export default function Nav() {
                   href={link.href}
                   className={[
                     baseLinkClass,
-                    active ? 'bg-white text-text shadow-lg' : 'text-text/70 hover:text-text hover:bg-white/70',
+                    active ? 'bg-slate-900/5 text-text' : 'text-text/70 hover:text-text hover:bg-slate-900/5',
                   ].join(' ')}
                 >
                   <span>{link.label}</span>
@@ -98,7 +99,7 @@ export default function Nav() {
                 aria-expanded={isDropdownOpen}
                 className={[
                   baseLinkClass,
-                  isDropdownOpen ? 'bg-white text-text shadow-lg' : 'text-text/70 hover:text-text hover:bg-white/70',
+                  isDropdownOpen ? 'bg-slate-900/5 text-text' : 'text-text/70 hover:text-text hover:bg-slate-900/5',
                 ].join(' ')}
                 onClick={() => {
                   cancelScheduledClose();

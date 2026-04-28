@@ -49,6 +49,52 @@ function formatCurrency(amount) {
   return `R ${num.toFixed(2)}`;
 }
 
+function toDateInputValue(isoString) {
+  if (!isoString) return '';
+  const date = new Date(isoString);
+  if (Number.isNaN(date.getTime())) return '';
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function parseDurationToMinutes(hoursValue, minutesValue) {
+  const hoursNum = Number(hoursValue ?? 0);
+  const minutesNum = Number(minutesValue ?? 0);
+  if (!Number.isFinite(hoursNum) || !Number.isFinite(minutesNum)) return null;
+  if (!Number.isInteger(hoursNum) || !Number.isInteger(minutesNum)) return null;
+  if (hoursNum < 0 || minutesNum < 0 || minutesNum > 59) return null;
+  return hoursNum * 60 + minutesNum;
+}
+
+function applyDateToStartTime(startIso, yyyyMmDd) {
+  if (!startIso || !yyyyMmDd) return null;
+  const startDate = new Date(startIso);
+  if (Number.isNaN(startDate.getTime())) return null;
+  const [yearStr, monthStr, dayStr] = yyyyMmDd.split('-');
+  const year = Number(yearStr);
+  const month = Number(monthStr);
+  const day = Number(dayStr);
+  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) return null;
+  return new Date(
+    year,
+    month - 1,
+    day,
+    startDate.getHours(),
+    startDate.getMinutes(),
+    startDate.getSeconds(),
+    startDate.getMilliseconds()
+  );
+}
+
+function computeEndTimeIso(startDateObj, durationMinutes) {
+  if (!(startDateObj instanceof Date) || Number.isNaN(startDateObj.getTime())) return null;
+  const minutesNum = Number(durationMinutes);
+  if (!Number.isFinite(minutesNum)) return null;
+  return new Date(startDateObj.getTime() + minutesNum * 60 * 1000).toISOString();
+}
+
 function computeShiftSummary(shift, tables = [], nowTs = Date.now()) {
   const startMs = shift?.start_time ? new Date(shift.start_time).getTime() : null;
   const endMs = shift?.end_time ? new Date(shift.end_time).getTime() : null;
@@ -105,6 +151,12 @@ export default function WaiteringPage() {
   const [justCompletedSummary, setJustCompletedSummary] = useState(null);
   const [editingTable, setEditingTable] = useState(null);
   const [removeScreenshot, setRemoveScreenshot] = useState(false);
+  const [isEditingShiftSummary, setIsEditingShiftSummary] = useState(false);
+  const [shiftEditDate, setShiftEditDate] = useState('');
+  const [shiftEditHours, setShiftEditHours] = useState('');
+  const [shiftEditMinutes, setShiftEditMinutes] = useState('');
+  const [savingShiftSummary, setSavingShiftSummary] = useState(false);
+  const [shiftEditError, setShiftEditError] = useState(null);
 
   const addFormRef = useRef(null);
 
@@ -150,6 +202,11 @@ export default function WaiteringPage() {
   }, [selectedShift?.id]);
 
   useEffect(() => {
+    setIsEditingShiftSummary(false);
+    setShiftEditError(null);
+  }, [selectedShift?.id]);
+
+  useEffect(() => {
     if (selectedShift) return;
     if (activeShift) {
       setSelectedShift(activeShift);
@@ -173,6 +230,10 @@ export default function WaiteringPage() {
   const selectedSummary = useMemo(
     () => (selectedShift ? computeShiftSummary(selectedShift, tables, nowTs) : null),
     [selectedShift, tables, nowTs]
+  );
+
+  const canEditShiftSummary = Boolean(
+    selectedShift && (selectedShift.status === 'completed' || selectedShift.end_time)
   );
 
   async function loadActiveShift(currentUser = user) {
@@ -424,6 +485,107 @@ export default function WaiteringPage() {
     setEditingTable(null);
     setRemoveScreenshot(false);
     resetTableForm();
+  }
+
+  function beginEditShiftSummary() {
+    if (!selectedShift || !canEditShiftSummary) return;
+    const startDateValue = toDateInputValue(selectedShift.start_time);
+    const startMs = selectedShift.start_time ? new Date(selectedShift.start_time).getTime() : null;
+    const endMs = selectedShift.end_time ? new Date(selectedShift.end_time).getTime() : null;
+    const durationFromTimes =
+      startMs != null && endMs != null ? Math.max(0, Math.round((endMs - startMs) / 60000)) : null;
+    const fallbackMinutes = Math.max(0, Math.round((selectedSummary?.durationHours || 0) * 60));
+    const durationMinutes = durationFromTimes ?? fallbackMinutes;
+    const hours = Math.floor(durationMinutes / 60);
+    const minutes = durationMinutes % 60;
+
+    setShiftEditDate(startDateValue);
+    setShiftEditHours(String(hours));
+    setShiftEditMinutes(String(minutes));
+    setShiftEditError(null);
+    setIsEditingShiftSummary(true);
+  }
+
+  function cancelShiftSummaryEdit() {
+    setIsEditingShiftSummary(false);
+    setShiftEditError(null);
+  }
+
+  async function handleSaveShiftSummaryEdits() {
+    if (!selectedShift || !user) {
+      setShiftEditError('Select a completed shift first.');
+      return;
+    }
+    if (!canEditShiftSummary) {
+      setShiftEditError('Only completed shifts can be edited.');
+      return;
+    }
+    if (!shiftEditDate) {
+      setShiftEditError('Select a shift date.');
+      return;
+    }
+    const startDateObj = applyDateToStartTime(selectedShift.start_time, shiftEditDate);
+    if (!startDateObj) {
+      setShiftEditError('Invalid shift date.');
+      return;
+    }
+    const durationMinutes = parseDurationToMinutes(shiftEditHours, shiftEditMinutes);
+    if (durationMinutes == null) {
+      setShiftEditError('Enter a valid duration.');
+      return;
+    }
+    const newStartIso = startDateObj.toISOString();
+    const newEndIso = computeEndTimeIso(startDateObj, durationMinutes);
+    if (!newEndIso) {
+      setShiftEditError('Unable to compute shift end time.');
+      return;
+    }
+
+    setSavingShiftSummary(true);
+    setShiftEditError(null);
+    try {
+      const { data, error } = await supabase
+        .from('waiter_shifts')
+        .update({ start_time: newStartIso, end_time: newEndIso })
+        .eq('id', selectedShift.id)
+        .eq('user_id', user.id)
+        .select('*')
+        .single();
+      if (error) throw error;
+      if (!data) throw new Error('Shift update failed.');
+
+      setSelectedShift(data);
+      setPastShifts((prev) =>
+        prev.map((shift) => (shift.id === data.id ? { ...shift, ...data } : shift))
+      );
+      setJustCompletedSummary((prev) => {
+        if (!prev || prev.shift?.id !== data.id) return prev;
+        const tablesForSummary = selectedShift?.id === data.id ? tables : null;
+        if (tablesForSummary) {
+          return { ...prev, shift: data, summary: computeShiftSummary(data, tablesForSummary, nowTs) };
+        }
+        const durationSummary = computeShiftSummary(data, [], nowTs);
+        const tipsPerHour =
+          prev.summary?.tipsTotal && durationSummary.durationHours > 0
+            ? prev.summary.tipsTotal / durationSummary.durationHours
+            : prev.summary?.tipsPerHour ?? null;
+        return {
+          ...prev,
+          shift: data,
+          summary: {
+            ...prev.summary,
+            durationHours: durationSummary.durationHours,
+            tipsPerHour,
+          },
+        };
+      });
+
+      setIsEditingShiftSummary(false);
+    } catch (error) {
+      setShiftEditError(error?.message || 'Unable to save shift changes.');
+    } finally {
+      setSavingShiftSummary(false);
+    }
   }
 
   async function handleAddTable(e) {
@@ -713,15 +875,82 @@ export default function WaiteringPage() {
                       {selectedSummary ? ` - ${formatDurationHours(selectedSummary.durationHours)}` : ''}
                     </div>
                   </div>
-                  {['active', 'completed'].includes(selectedShift.status) ? (
-                    <button
-                      className="rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-text shadow-sm hover:bg-slate-50"
-                      onClick={handleGenerateReport}
-                    >
-                      Generate report
-                    </button>
-                  ) : null}
+                  <div className="flex flex-wrap items-center gap-2">
+                    {canEditShiftSummary ? (
+                      isEditingShiftSummary ? (
+                        <div className="flex flex-wrap items-end gap-2">
+                          <TextInput
+                            type="date"
+                            value={shiftEditDate}
+                            onChange={(e) => setShiftEditDate(e.target.value)}
+                            className="w-[150px]"
+                            aria-label="Shift date"
+                            disabled={savingShiftSummary}
+                          />
+                          <TextInput
+                            type="number"
+                            min="0"
+                            step="1"
+                            value={shiftEditHours}
+                            onChange={(e) => setShiftEditHours(e.target.value)}
+                            className="w-20"
+                            aria-label="Shift duration hours"
+                            disabled={savingShiftSummary}
+                          />
+                          <TextInput
+                            type="number"
+                            min="0"
+                            max="59"
+                            step="1"
+                            value={shiftEditMinutes}
+                            onChange={(e) => setShiftEditMinutes(e.target.value)}
+                            className="w-20"
+                            aria-label="Shift duration minutes"
+                            disabled={savingShiftSummary}
+                          />
+                          <button
+                            type="button"
+                            className="rounded-full bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow hover:brightness-110 disabled:opacity-70"
+                            onClick={handleSaveShiftSummaryEdits}
+                            disabled={savingShiftSummary}
+                          >
+                            {savingShiftSummary ? 'Saving...' : 'Save'}
+                          </button>
+                          <button
+                            type="button"
+                            className="rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-text shadow-sm hover:bg-slate-50"
+                            onClick={cancelShiftSummaryEdit}
+                            disabled={savingShiftSummary}
+                          >
+                            Cancel
+                          </button>
+                          <span className="text-xs text-text/60">Edits date + duration only.</span>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          className="rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-text shadow-sm hover:bg-slate-50"
+                          onClick={beginEditShiftSummary}
+                        >
+                          Edit shift
+                        </button>
+                      )
+                    ) : null}
+                    {['active', 'completed'].includes(selectedShift.status) ? (
+                      <button
+                        className="rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-text shadow-sm hover:bg-slate-50"
+                        onClick={handleGenerateReport}
+                      >
+                        Generate report
+                      </button>
+                    ) : null}
+                  </div>
                 </div>
+                {isEditingShiftSummary && shiftEditError ? (
+                  <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+                    {shiftEditError}
+                  </div>
+                ) : null}
 
                 {selectedSummary ? (
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
@@ -1065,3 +1294,9 @@ export default function WaiteringPage() {
     </>
   );
 }
+
+// Manual test checklist:
+// - Select a completed shift -> Edit -> change date -> save -> past shifts list shows new date
+// - Change duration -> save -> selected summary duration + tips/hr update
+// - Cancel leaves values unchanged
+// - Active shift does not show Edit shift button

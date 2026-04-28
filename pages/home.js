@@ -1,61 +1,75 @@
-﻿import Link from 'next/link';
 import SectionBand from '@/components/Surface/SectionBand';
 import PrimaryButton from '@/components/ui/PrimaryButton';
 import GhostButton from '@/components/ui/GhostButton';
 import Chip from '@/components/ui/Chip';
 import Card from '@/components/CardKit/Card';
 
-const STEPS = [
+const MIRROR_POINTS = [
   {
-    title: 'Frame the day',
+    title: 'Thought Loops',
     copy:
-      "Pick the quests, habits, and rituals that matter now. Your HUD locks today's priorities into a simple plan.",
+      "Recurring thoughts get a place to land, so they can be seen clearly instead of circling in the background.",
   },
   {
-    title: 'Equip your kit',
+    title: 'Emotional Signals',
     copy:
-      "Loadouts bundle tools, focus modes, and reminders into repeatable presets so you drop straight into flow.",
+      "Moods, resistance, capacity, and focus become readable signals instead of vague internal weather.",
   },
   {
-    title: 'Play the loop',
+    title: 'Repeated Patterns',
     copy:
-      "Log reps as XP, watch the scorecard update, and catch momentum shifts before they derail your day.",
-  },
-];
-
-const FEATURES = [
-  {
-    title: 'Reality-first interfaces',
-    copy:
-      "Interfaces that stay in sync with what actually happened—not what you hoped would.",
-  },
-  {
-    title: 'Numbers that remember why',
-    copy:
-      "Each interface carries its own story, intent, and reflections, and syncs with the rest—so your numbers stay linked to the decisions behind them and the bigger picture.",
-  },
-  {
-    title: 'Ambient accountability',
-    copy:
-      "Lightweight cues. Timely nudges keep focus intact and your attention unbroken.",
+      "Behavioral loops surface over time, making them easier to work with instead of carrying them blindly.",
   },
 ];
 
-const PROOF_POINTS = [
+const SYSTEM_MODULES = [
   {
-    title: 'Continuous momentum',
+    title: 'Quests',
     copy:
-      "Stalled tasks show up early, so you can turn them into deliberate missions that build skill instead of background guilt.",
+      "Turn intentions into visible missions with progress, friction, and next actions held in one place.",
   },
   {
-    title: 'Learn without burnout',
+    title: 'Notes',
     copy:
-      "Ritual tracking highlights what sustains focus, grades, and portfolio pieces over time.",
+      "Capture fragments before they vanish: ideas, observations, plans, and useful sparks from the day.",
   },
   {
-    title: 'Make progress visible',
+    title: 'Reflections',
     copy:
-      "XP turns invisible reps into honest movement-toward meaningful launches, revenue, reputation, and mastery.",
+      "Review what happened, what shifted, what mattered, and what the next loop should learn.",
+  },
+  {
+    title: 'Patterns',
+    copy:
+      "Connect repeated signals across thoughts, emotion, behavior, and attention so the system can show what keeps returning.",
+  },
+  {
+    title: 'Rituals',
+    copy:
+      "Build repeatable sequences for entering focus, closing loops, regulating state, and returning to the work.",
+  },
+  {
+    title: 'Codex',
+    copy:
+      "Store principles, symbols, methods, and hard-won insights as a living reference for future decisions.",
+  },
+];
+
+const ORIGIN_POINTS = [
+  {
+    title: 'Real Friction',
+    copy:
+      "Selfware is shaped around Caide's actual days: scattered ideas, emotional shifts, open loops, creative pressure, and unfinished systems.",
+  },
+  {
+    title: 'Real Iteration',
+    copy:
+      "The interface changes when the workflow proves something. Useful patterns stay. Decorative noise gets cut.",
+  },
+  {
+    title: 'Built to Generalize Later',
+    copy:
+      "It starts with one real human operating system before becoming something broader. Specific first, honest always.",
   },
 ];
 
@@ -80,25 +94,28 @@ function HeroSection() {
     <section className="relative overflow-hidden py-24 sm:py-28">
       <div className="relative mx-auto flex max-w-3xl flex-col items-center gap-6 text-center">
         <Chip className="bg-white/90 text-xs uppercase tracking-[0.45em] text-text-muted">
-          Selfware • RealityHUD
+          First Contact
         </Chip>
         <h1 className="text-4xl font-semibold tracking-tight text-text sm:text-5xl">
-          Make your day playable.
+          Command center online.
         </h1>
         <p className="text-base leading-relaxed text-text-muted sm:text-lg">
-          Selfware is a heads-up display for real life. Set the mission, equip the right mindset, loadouts,
-          while keeping progress visible and actionable from first move to last.
+          Selfware is a personal operating system that turns your inner world into something you can
+          see, shape, and improve.
+        </p>
+        <p className="max-w-2xl text-sm leading-relaxed text-text/70 sm:text-base">
+          Bring the scattered pieces: the quests, the notes, the loops, the signals. Selfware helps
+          turn them into a calm working system without pretending the machine is magic.
         </p>
         <div className="flex flex-col items-center gap-3 pt-2 sm:flex-row">
-          <PrimaryButton href="/join">Request Early Access</PrimaryButton>
-          <GhostButton href="#how-it-works">See how it works</GhostButton>
+          <PrimaryButton href="/dashboard">Enter the System</PrimaryButton>
+          <GhostButton href="#the-system">View the Modules</GhostButton>
         </div>
         <a
           href="#how-it-works"
           className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.4em] text-text-muted"
         >
-          <span>See the steps</span>
-          <span aria-hidden>?</span>
+          <span>Open the map</span>
         </a>
       </div>
     </section>
@@ -115,17 +132,18 @@ function HowItWorksSection() {
       <div className="flex flex-col gap-10 text-center">
         <div className="space-y-3">
           <span className="text-sm font-semibold uppercase tracking-[0.3em] text-text-muted">
-            How it works
+            The Mirror
           </span>
           <h2 className="text-3xl font-semibold text-text sm:text-4xl">
-            Your day in three moves
+            Make the inner world visible
           </h2>
           <p className="mx-auto max-w-2xl text-base text-text-muted sm:text-lg">
-          RealityHUD turns your day into a simple loop: decide what matters, equip the right loadouts, then track what actually happened.
+            Selfware helps catch thoughts, emotions, behaviors, and repeated loops so they can be
+            worked with directly instead of carried blindly.
           </p>
         </div>
         <div className="grid gap-6 sm:grid-cols-3">
-          {STEPS.map((step, idx) => (
+          {MIRROR_POINTS.map((step, idx) => (
             <Card
               key={step.title}
               title={step.title}
@@ -144,21 +162,22 @@ function HowItWorksSection() {
 
 function FeaturesSection() {
   return (
-    <section className="py-24">
+    <section id="the-system" className="py-24">
       <div className="mx-auto flex max-w-5xl flex-col gap-12 text-center">
         <div className="space-y-3">
           <span className="text-sm font-semibold uppercase tracking-[0.3em] text-text-muted">
-            Product foundations
+            The System
           </span>
           <h2 className="text-3xl font-semibold text-text sm:text-4xl">
-            Built for momentum you can feel
+            Practical modules for a living interface
           </h2>
           <p className="mx-auto max-w-2xl text-base text-text-muted sm:text-lg">
-            Calm surfaces. Honest feedback. Every feature supports the loop from action to review, so you always know what happened and what to adjust next.
+            The atmosphere can feel alive, but the tools stay practical. Each module gives a different
+            part of the inner operating system somewhere useful to go.
           </p>
         </div>
-        <div className="grid gap-6 sm:grid-cols-3">
-          {FEATURES.map((feature, idx) => (
+        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {SYSTEM_MODULES.map((feature, idx) => (
             <Card
               key={feature.title}
               title={feature.title}
@@ -181,17 +200,18 @@ function ProofSection() {
       <div className="mx-auto flex max-w-5xl flex-col gap-12 text-center">
         <div className="space-y-3">
           <span className="text-sm font-semibold uppercase tracking-[0.3em] text-text-muted">
-            Outcomes
+            The Caide Origin
           </span>
           <h2 className="text-3xl font-semibold text-text sm:text-4xl">
-            Progress that’s hard to ignore
+            Built around one real workflow first
           </h2>
           <p className="mx-auto max-w-2xl text-base text-text-muted sm:text-lg">
-            For anyone who works, studies, and creates in the same day—and needs a clear picture of how it all actually unfolded in one place.
+            Selfware is being built around Caide&apos;s real friction, reflection, systems, and iteration
+            before it tries to become a broader tool.
           </p>
         </div>
         <div className="grid gap-6 sm:grid-cols-3">
-          {PROOF_POINTS.map((point, idx) => (
+          {ORIGIN_POINTS.map((point, idx) => (
             <Card
               key={point.title}
               title={point.title}
@@ -213,14 +233,15 @@ function FinalCTA() {
     <section className="py-24">
       <div className="mx-auto flex max-w-3xl flex-col items-center gap-6 text-center">
         <h2 className="text-3xl font-semibold text-text sm:text-4xl">
-          Start with one mission. Keep the day in view.
+          Start with one signal.
         </h2>
         <p className="text-base text-text-muted sm:text-lg">
-          Join early access, map your first mission, and feel the difference when the HUD keeps focus and feedback in one view.
+          Open the command center, add one honest piece of information, and let the system begin
+          turning scattered input into shape.
         </p>
         <div className="flex flex-col items-center gap-3 sm:flex-row">
-          <PrimaryButton href="/join">Join the waitlist</PrimaryButton>
-          <GhostButton href="/caide">Meet the team</GhostButton>
+          <PrimaryButton href="/dashboard">Open the Command Center</PrimaryButton>
+          <GhostButton href="/codex">Enter the Codex</GhostButton>
         </div>
       </div>
     </section>

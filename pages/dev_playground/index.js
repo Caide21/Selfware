@@ -1,4 +1,4 @@
-import { renderCard } from '@/components/Cards/cardRegistry';
+import { renderCard } from '@/components/CardKit/cards/cardRegistry';
 import { usePageHeading } from '@/components/Layout/PageShell';
 
 const PAGE_HEADING = {

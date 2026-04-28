@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import RitualCard from "../Cards/RitualCard";
+import RitualCard from "@/components/CardKit/cards/RitualCard";
 
 export default function RitualMap() {
   const [rituals, setRituals] = useState([]);

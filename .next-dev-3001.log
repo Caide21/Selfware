@@ -1,0 +1,28 @@
+
+> projectaether@0.1.0 dev
+> next dev -p 3001
+
+   ▲ Next.js 15.5.9
+   - Local:        http://localhost:3001
+   - Network:      http://192.168.3.60:3001
+   - Environments: .env.local
+   - Experiments (use with caution):
+     · serverActions
+
+ ✓ Starting...
+ ✓ Ready in 2.7s
+ ○ Compiling /home ...
+ ✓ Compiled /home in 17.5s (498 modules)
+ GET /home 200 in 20081ms
+ ○ Compiling /character-portal ...
+ ✓ Compiled /character-portal in 1214ms (504 modules)
+ GET /character-portal 200 in 1716ms
+ ✓ Compiled /notes in 204ms (508 modules)
+ GET /notes 200 in 556ms
+ ✓ Compiled /reflections in 189ms (512 modules)
+ GET /reflections 200 in 541ms
+ ✓ Compiled /living-map in 189ms (516 modules)
+ GET /living-map 200 in 541ms
+ ✓ Compiled /bossa-progress in 186ms (520 modules)
+ GET /bossa-progress 200 in 531ms
+ ✓ Compiled in 2.2s (472 modules)

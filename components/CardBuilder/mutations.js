@@ -350,13 +350,5 @@ export async function apply(op, payload = {}, options = {}) {
     });
   }
 
-  if (handler.optimistic) {
-    context = handler.optimistic(payload) || null;
-  }
-
-  if (op === 'update_attachment' && String(payload.id || '').startsWith('temp-')) {
-    return Promise.resolve(null);
-  }
-
   return await run();
 }
