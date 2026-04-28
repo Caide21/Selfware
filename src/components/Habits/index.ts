@@ -15,7 +15,7 @@ export interface HabitPayload {
 
 export interface HabitRow extends HabitPayload {
   id: string;
-  owner_id?: string;
+  user_id?: string;
   created_at?: string;
   updated_at?: string;
 }
@@ -35,7 +35,7 @@ export async function createHabit(payload: HabitPayload, polarity: HabitPolarity
       {
         ...payload,
         polarity,
-        owner_id: user.id,
+        user_id: user.id,
       },
     ])
     .select()

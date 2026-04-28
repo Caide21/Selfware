@@ -70,6 +70,7 @@ function createBlankHabit(polarity: HabitPolarity = 'good'): HabitRow {
 
 export default function HabitsPage() {
   const [habits, setHabits] = useState<HabitRow[]>([]);
+  const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -85,9 +86,28 @@ export default function HabitsPage() {
       setLoadError(null);
 
       try {
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
+
+        if (userError) throw userError;
+        if (!user) {
+          if (active) {
+            setUserId(null);
+            setHabits([]);
+          }
+          return;
+        }
+
+        if (active) {
+          setUserId(user.id);
+        }
+
         const { data, error } = await supabase
           .from('habits')
           .select('*')
+          .eq('user_id', user.id)
           .order('created_at', { ascending: true });
 
         if (error) throw error;
@@ -125,13 +145,22 @@ export default function HabitsPage() {
     try {
       if (isNew) {
         // createHabit is your existing helper
-    const row = (await createHabit(payload, polarity || 'good')) as HabitRow;
+        const row = (await createHabit(payload, polarity || 'good')) as HabitRow;
         setHabits(prev => prev.map(h => (h.id === id ? row : h)));
       } else {
+        const {
+          data: { user },
+          error: userError,
+        } = await supabase.auth.getUser();
+
+        if (userError) throw userError;
+        if (!user) throw new Error('Not signed in');
+
         const { data, error } = await supabase
           .from('habits')
           .update(payload)
           .eq('id', id)
+          .eq('user_id', user.id)
           .select()
           .single<HabitRow>();
 
@@ -201,11 +230,14 @@ export default function HabitsPage() {
       {loading && (
         <div className="text-sm text-slate-500">Loading habits...</div>
       )}
+      {!loading && !loadError && !userId && (
+        <div className="text-sm text-slate-500">Sign in required to manage habits.</div>
+      )}
       {loadError && (
         <div className="text-sm text-rose-600">Error: {loadError}</div>
       )}
 
-      {!loading && !loadError && (
+      {!loading && !loadError && userId && (
         <div className="grid gap-6 md:grid-cols-3">
           {renderColumn('Good habits', 'good', good)}
           {renderColumn('Bad habits', 'bad', bad)}
