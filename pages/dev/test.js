@@ -532,3 +532,11 @@ function FinalCTA() {
 
 TestPage.showCorridorSpine = false;
 
+export function getServerSideProps() {
+  if (process.env.NODE_ENV === 'production') {
+    return { notFound: true };
+  }
+
+  return { props: {} };
+}
+

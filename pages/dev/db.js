@@ -13,8 +13,8 @@ const resources = [
   { key: 'v_loadouts_expanded', label: 'v_loadouts_expanded', filter: (query, userId) => query.eq('user_id', userId) },
 ];
 
-export default function DebugDbPage() {
-  const heading = DEBUG_ALLOWED
+export default function DebugDbPage({ debugAllowed = DEBUG_ALLOWED }) {
+  const heading = debugAllowed
     ? { emoji: '[]', title: 'DB Debug', subtitle: 'Supabase table counts' }
     : { emoji: '[]', title: 'DB Debug', subtitle: 'Disabled in this environment' };
 
@@ -34,16 +34,16 @@ export default function DebugDbPage() {
         console.error('Debug DB: failed to resolve user', error);
       }
     };
-    if (DEBUG_ALLOWED) {
+    if (debugAllowed) {
       fetchUser();
     }
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [debugAllowed]);
 
   useEffect(() => {
-    if (!DEBUG_ALLOWED || !userId) return;
+    if (!debugAllowed || !userId) return;
     let cancelled = false;
     const run = async () => {
       setLoading(true);
@@ -70,11 +70,11 @@ export default function DebugDbPage() {
     return () => {
       cancelled = true;
     };
-  }, [userId]);
+  }, [debugAllowed, userId]);
 
-  const ready = DEBUG_ALLOWED && userId;
+  const ready = debugAllowed && userId;
 
-  if (!DEBUG_ALLOWED) {
+  if (!debugAllowed) {
     return (
       <div className="p-4 text-sm opacity-70">
         Enable DEBUG_DB=1 or run outside production to access this page.
@@ -104,6 +104,14 @@ export default function DebugDbPage() {
       )}
     </div>
   );
+}
+
+export function getServerSideProps() {
+  if (process.env.NODE_ENV === 'production' && process.env.DEBUG_DB !== '1') {
+    return { notFound: true };
+  }
+
+  return { props: { debugAllowed: true } };
 }
 
 

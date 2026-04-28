@@ -1,4 +1,4 @@
-// pages/sandbox.js
+// pages/dev/sandbox.js
 import { useMemo, useRef, useState } from 'react';
 import { usePageHeading } from '@/components/Layout/PageShell';
 import SectionHeading from '@/components/SectionHeading';
@@ -73,6 +73,14 @@ export default function Sandbox() {
       />
     </main>
   );
+}
+
+export function getServerSideProps() {
+  if (process.env.NODE_ENV === 'production') {
+    return { notFound: true };
+  }
+
+  return { props: {} };
 }
 
 /* ---------------- CardStack (stacked deck with hover + arrow keys) ---------------- */

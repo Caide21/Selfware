@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { TextInput } from '@/components/Form';
-import { supabase } from '@/lib/supabase';
+import { supabase } from '@/lib/supabaseClient';
 import { useRouter } from 'next/router';
 import { usePageHeading } from '@/components/Layout/PageShell';
 

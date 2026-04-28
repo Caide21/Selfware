@@ -144,6 +144,14 @@ export default function CardBuilderDemo() {
   );
 }
 
+export function getServerSideProps() {
+  if (process.env.NODE_ENV === 'production') {
+    return { notFound: true };
+  }
+
+  return { props: {} };
+}
+
 
 
 

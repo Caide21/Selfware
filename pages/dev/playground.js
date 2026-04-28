@@ -127,3 +127,11 @@ export default function DevPlaygroundPage() {
     </div>
   );
 }
+
+export function getServerSideProps() {
+  if (process.env.NODE_ENV === 'production') {
+    return { notFound: true };
+  }
+
+  return { props: {} };
+}
