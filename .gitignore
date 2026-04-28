@@ -32,6 +32,7 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -39,8 +40,14 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
-<<<<<<< HEAD
 
-node_modules\npublic/enchantments\npublic/fog*.png\n*.zip
-=======
->>>>>>> 99cc43d (cleanup)
+# python
+__pycache__/
+*.pyc
+
+# archives
+*.rar
+*.zip
+
+# local logs
+*.log

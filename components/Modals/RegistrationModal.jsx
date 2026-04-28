@@ -57,7 +57,7 @@ export default function RegistrationModal({ isOpen, onClose, onSubmit }) {
           <fieldset>
             <legend className="font-semibold mb-1">Focus Areas</legend>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {["GPT", "Notion", "Automation", "Symbolic System Design"].map((option) => (
+              {["GPT", "Automation", "Symbolic System Design"].map((option) => (
                 <label key={option} className="flex items-center gap-2">
                   <input
                     type="checkbox"

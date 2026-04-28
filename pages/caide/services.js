@@ -6,7 +6,7 @@ const PAGE_HEADING = {
   emoji: "dY'�",
   title: 'Services',
   subtitle:
-    'Tailored AI sessions to help you automate, clarify, and evolve using GPT, Notion, and symbolic design.',
+    'Tailored AI sessions to help you automate, clarify, and evolve using GPT, workflows, and symbolic design.',
 };
 
 export default function ServicesPage() {

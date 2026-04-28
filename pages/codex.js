@@ -1,8 +1,6 @@
-﻿import Link from 'next/link';
+import Link from 'next/link';
 import Head from 'next/head';
 import { usePageHeading } from '@/components/Layout/PageShell';
-import { fetchCodexIndexFromNotion } from '../lib/notion';
-import { syncCodexIndexToSupabase } from '../lib/codexSync';
 import { supabase } from '../lib/supabaseClient';
 
 const PAGE_HEADING = {
@@ -10,9 +8,6 @@ const PAGE_HEADING = {
   title: 'The Codex',
   subtitle: 'Browse symbolic scrolls, operating principles, and reference entries.',
 };
-
-const isCodexDebug = process.env.CODEx_DEBUG === '1';
-const showSyncButton = process.env.NODE_ENV !== 'production' || isCodexDebug;
 
 export default function CodexPage({ codex, error }) {
   usePageHeading(PAGE_HEADING);
@@ -43,39 +38,14 @@ export default function CodexPage({ codex, error }) {
           ))
         )}
       </div>
-
-      {showSyncButton ? (
-        <div className="mx-auto mt-6 max-w-6xl px-2 sm:px-0">
-          <button
-            className="inline-flex items-center rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-text transition hover:border-primary/50 hover:text-primary"
-            onClick={async () => {
-              try {
-                const response = await fetch('/api/codex/sync', { method: 'POST' });
-                const summary = await response.json();
-                if (isCodexDebug) console.log('Codex sync:', summary);
-                if (summary.ok) {
-                  window.location.reload();
-                }
-              } catch (err) {
-                if (isCodexDebug) console.error('Codex sync error', err);
-              }
-            }}
-          >
-            Sync Codex
-          </button>
-        </div>
-      ) : null}
     </>
   );
 }
 
 export async function getServerSideProps() {
-  const debug = process.env.CODEx_DEBUG === '1';
+  const debug = process.env.CODEX_DEBUG === '1';
 
   try {
-    const notionEntries = await fetchCodexIndexFromNotion();
-    await syncCodexIndexToSupabase({ entries: notionEntries, userId: null });
-
     const { data, error } = await supabase
       .from('codex_entries')
       .select('title, slug, symbol, description')

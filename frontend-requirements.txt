@@ -1,4 +1,4 @@
-# FRONTEND DEPENDENCIES (Next.js + Tailwind + Notion)
+# FRONTEND DEPENDENCIES (Next.js + Tailwind)
 
 next@15.3.0
 react@19.0.0
@@ -8,7 +8,6 @@ tailwindcss@3.4.3
 postcss@8.5.3
 autoprefixer@10.4.21
 
-@notionhq/client@2.2.4
 
 @fingerprintjs/fingerprintjs@4.6.2
 @react-three/fiber@9.1.2
@@ -16,4 +15,3 @@ autoprefixer@10.4.21
 three@0.176.0
 konva@9.3.20
 react-konva@19.0.3
-

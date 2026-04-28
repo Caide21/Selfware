@@ -126,15 +126,14 @@
     {
       "dir": "lib",
       "files": [
-        "colors.js", "notion.js", "quests.js",
-        "sendConfirmation.js", "supabase.js", "zones.js"
+        "colors.js", "quests.js",
+        "supabase.js", "zones.js"
       ]
     },
     {
       "dir": "pages/api",
       "files": [
-        "classify.js", "create-paystack-session.js", "fetch-codex.js",
-        "register.js", "test-email.js"
+        "classify.js", "register.js"
       ]
     },
     {
