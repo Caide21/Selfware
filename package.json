@@ -17,7 +17,6 @@
     "@react-three/drei": "^10.0.8",
     "@react-three/fiber": "^9.1.2",
     "@supabase/supabase-js": "^2.53.0",
-    "caniuse-lite": "^1.0.30001790",
     "classnames": "^2.5.1",
     "deno": "^2.4.4",
     "konva": "^9.3.20",

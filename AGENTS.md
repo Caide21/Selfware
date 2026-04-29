@@ -208,6 +208,11 @@ Layout:
 Global layout/navigation:
 - Global navigation should be owned by the shared layout shell, not individual pages.
 - Selfware currently uses minimal global corner controls instead of a traditional navbar: top-left auth/account controls and Settings placeholder; top-right Portal Room link to `/character-portal`.
+- Pages Router routes use `components/Layout/PageShell.jsx` as the main global shell.
+- App Router routes may keep their own router layout wrappers, but must reuse shared shell controls instead of creating separate nav/auth/settings systems.
+- Shared global controls live in `components/Layout/ShellControls.jsx`.
+- Prefer extending `ShellControls` or `PageShell` over creating duplicate nav components.
+- Do not create new full navbar systems unless explicitly requested.
 - Pages should not recreate navbars, duplicate global auth controls, or add their own persistent portal buttons unless a specific page-level design requires it.
 
 Visual style:
