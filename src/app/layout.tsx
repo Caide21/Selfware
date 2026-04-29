@@ -8,7 +8,7 @@ import type { ReactNode } from 'react';
 import { ZoneProvider } from '@/worlds/core/ZoneContext';
 import ZoneRouteSync from '@/worlds/core/ZoneRouteSync';
 import DigitAvatar from '@/worlds/digit/DigitAvatar';
-import AppNav from '@/components/Layout/AppNav';
+import ShellControls from '@/components/Layout/ShellControls';
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
@@ -18,11 +18,11 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <ZoneRouteSync />
 
           <div className="flex min-h-screen flex-col">
-            <AppNav />
+            <ShellControls />
 
             <div className="relative flex flex-1">
               <DigitAvatar />
-              <main className="flex-1 pt-8">{children}</main>
+              <main className="flex-1 px-6 pb-24 pt-28 sm:px-10">{children}</main>
             </div>
 
             <footer className="border-t border-slate-200/60 px-4 py-3 text-xs text-slate-500">

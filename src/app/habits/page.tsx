@@ -5,7 +5,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 import HabitCard from '@/components/CardKit/cards/HabitCard';
 import { supabase } from '@/lib/supabaseClient';
 import { createHabit, type HabitPayload, type HabitPolarity, type HabitRow } from '@/components/Habits';
-import { usePageHeading } from '@/components/Layout/PageShell';
 
 const PAGE_HEADING = {
   emoji: '',
@@ -74,9 +73,6 @@ export default function HabitsPage() {
   const [loading, setLoading] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
-
-  // keeps your HUD/page heading in sync
-  usePageHeading(PAGE_HEADING);
 
   useEffect(() => {
     let active = true;
