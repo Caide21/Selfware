@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Head from 'next/head';
 import { supabase } from '@/lib/supabaseClient';
 import { usePageHeading } from '@/components/Layout/PageShell';
@@ -162,6 +162,66 @@ export default function WaiteringPage() {
 
   usePageHeading(PAGE_HEADING);
 
+  const loadActiveShift = useCallback(async (currentUser) => {
+    if (!currentUser) return null;
+    const { data, error } = await supabase
+      .from('waiter_shifts')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .eq('status', 'active')
+      .order('start_time', { ascending: false })
+      .limit(1);
+    if (error) throw error;
+    const shift = data?.[0] ?? null;
+    setActiveShift(shift);
+    return shift;
+  }, []);
+
+  const loadPastShifts = useCallback(async (currentUser) => {
+    if (!currentUser) {
+      setPastShifts([]);
+      return;
+    }
+    const { data, error } = await supabase
+      .from('waiter_shifts')
+      .select('*')
+      .eq('user_id', currentUser.id)
+      .eq('status', 'completed')
+      .order('start_time', { ascending: false })
+      .limit(20);
+    if (error) throw error;
+    const shifts = data ?? [];
+    const ids = shifts.map((s) => s.id);
+    const tablesByShift = {};
+    if (ids.length) {
+      const { data: tableData, error: tablesError } = await supabase
+        .from('waiter_tables')
+        .select('shift_id, guests, bill_total, tip_amount')
+        .in('shift_id', ids);
+      if (tablesError) throw tablesError;
+      (tableData || []).forEach((row) => {
+        if (!tablesByShift[row.shift_id]) tablesByShift[row.shift_id] = [];
+        tablesByShift[row.shift_id].push(row);
+      });
+    }
+    setPastShifts(shifts.map((s) => ({ ...s, tables: tablesByShift[s.id] || [] })));
+  }, []);
+
+  const loadTablesForShift = useCallback(async (shiftId) => {
+    if (!shiftId || !user) {
+      setTables([]);
+      return;
+    }
+    const { data, error } = await supabase
+      .from('waiter_tables')
+      .select('*')
+      .eq('user_id', user.id)
+      .eq('shift_id', shiftId)
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    setTables(data ?? []);
+  }, [user]);
+
   useEffect(() => {
     let cancelled = false;
     const bootstrap = async () => {
@@ -185,7 +245,7 @@ export default function WaiteringPage() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [loadActiveShift, loadPastShifts]);
 
   useEffect(() => {
     if (!activeShift) return undefined;
@@ -199,7 +259,7 @@ export default function WaiteringPage() {
     } else {
       setTables([]);
     }
-  }, [selectedShift?.id]);
+  }, [loadTablesForShift, selectedShift?.id]);
 
   useEffect(() => {
     setIsEditingShiftSummary(false);
@@ -235,66 +295,6 @@ export default function WaiteringPage() {
   const canEditShiftSummary = Boolean(
     selectedShift && (selectedShift.status === 'completed' || selectedShift.end_time)
   );
-
-  async function loadActiveShift(currentUser = user) {
-    if (!currentUser) return null;
-    const { data, error } = await supabase
-      .from('waiter_shifts')
-      .select('*')
-      .eq('user_id', currentUser.id)
-      .eq('status', 'active')
-      .order('start_time', { ascending: false })
-      .limit(1);
-    if (error) throw error;
-    const shift = data?.[0] ?? null;
-    setActiveShift(shift);
-    return shift;
-  }
-
-  async function loadTablesForShift(shiftId) {
-    if (!shiftId || !user) {
-      setTables([]);
-      return;
-    }
-    const { data, error } = await supabase
-      .from('waiter_tables')
-      .select('*')
-      .eq('user_id', user.id)
-      .eq('shift_id', shiftId)
-      .order('created_at', { ascending: false });
-    if (error) throw error;
-    setTables(data ?? []);
-  }
-
-  async function loadPastShifts(currentUser = user) {
-    if (!currentUser) {
-      setPastShifts([]);
-      return;
-    }
-    const { data, error } = await supabase
-      .from('waiter_shifts')
-      .select('*')
-      .eq('user_id', currentUser.id)
-      .eq('status', 'completed')
-      .order('start_time', { ascending: false })
-      .limit(20);
-    if (error) throw error;
-    const shifts = data ?? [];
-    const ids = shifts.map((s) => s.id);
-    const tablesByShift = {};
-    if (ids.length) {
-      const { data: tableData, error: tablesError } = await supabase
-        .from('waiter_tables')
-        .select('shift_id, guests, bill_total, tip_amount')
-        .in('shift_id', ids);
-      if (tablesError) throw tablesError;
-      (tableData || []).forEach((row) => {
-        if (!tablesByShift[row.shift_id]) tablesByShift[row.shift_id] = [];
-        tablesByShift[row.shift_id].push(row);
-      });
-    }
-    setPastShifts(shifts.map((s) => ({ ...s, tables: tablesByShift[s.id] || [] })));
-  }
 
   async function handleGenerateReport() {
     if (!selectedShift || !user) {

@@ -9,21 +9,6 @@ const PAGE_HEADING = {
 
 const options = [
   {
-    href: '/join/contact',
-    label: 'Contact',
-    icon: 'dY"�',
-  },
-  {
-    href: '/join/work',
-    label: 'Work With Us',
-    icon: "dY'�",
-  },
-  {
-    href: '/join/friends',
-    label: 'Allies',
-    icon: 'dY`�',
-  },
-  {
     href: '/join/login',
     label: 'Login',
     icon: 'dY"?',
