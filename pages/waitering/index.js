@@ -9,10 +9,11 @@ import WaiterTableCard from '@/components/Waitering/WaiterTableCard';
 const PAGE_HEADING = {
   emoji: '',
   title: 'Waitering',
-  subtitle: 'Track your hours, tables, and tips.',
+  subtitle: 'Track clock-in, clock-out, turnover, and retained cash.',
 };
 
 const DEFAULT_BRANCH = 'Bossa Somerset West';
+const SHIFT_TOTAL_TABLE_NUMBER = 'Shift total';
 
 const initialTableForm = {
   table_number: '',
@@ -27,6 +28,12 @@ const initialTableForm = {
   system_load: '',
   issue_source: '',
   group_type: '',
+};
+
+const initialShiftFinanceForm = {
+  bill_total: '',
+  tip_amount: '',
+  notes: '',
 };
 
 function formatShiftDate(dateString) {
@@ -47,6 +54,21 @@ function formatCurrency(amount) {
   const num = Number(amount ?? 0);
   if (!Number.isFinite(num)) return 'R 0.00';
   return `R ${num.toFixed(2)}`;
+}
+
+function computeTipPercentage(billTotal, tipAmount) {
+  const bill = Number(billTotal || 0);
+  const tip = Number(tipAmount || 0);
+  if (!Number.isFinite(bill) || bill <= 0 || !Number.isFinite(tip)) return null;
+  return (tip / bill) * 100;
+}
+
+function getShiftTotalRow(tables = []) {
+  return (tables || []).find((table) => table.table_number === SHIFT_TOTAL_TABLE_NUMBER) || null;
+}
+
+function getShiftDetailRows(tables = []) {
+  return (tables || []).filter((table) => table.table_number !== SHIFT_TOTAL_TABLE_NUMBER);
 }
 
 function toDateInputValue(isoString) {
@@ -100,18 +122,28 @@ function computeShiftSummary(shift, tables = [], nowTs = Date.now()) {
   const endMs = shift?.end_time ? new Date(shift.end_time).getTime() : null;
   const stopMs = endMs ?? nowTs;
   const durationHours = startMs ? Math.max(0, (stopMs - startMs) / (1000 * 60 * 60)) : 0;
-  const tablesCount = Array.isArray(tables) ? tables.length : 0;
+  const safeTables = Array.isArray(tables) ? tables : [];
+  const shiftTotalRow = getShiftTotalRow(safeTables);
+  const detailRows = getShiftDetailRows(safeTables);
+  const tablesCount = shiftTotalRow ? detailRows.length : safeTables.length;
 
   let guestsTotal = 0;
   let turnoverTotal = 0;
   let tipsTotal = 0;
-  (tables || []).forEach((t) => {
+  detailRows.forEach((t) => {
     guestsTotal += Number(t.guests || 0);
-    turnoverTotal += Number(t.bill_total || 0);
-    tipsTotal += Number(t.tip_amount || 0);
+    if (!shiftTotalRow) {
+      turnoverTotal += Number(t.bill_total || 0);
+      tipsTotal += Number(t.tip_amount || 0);
+    }
   });
 
-  const tipPct = turnoverTotal > 0 ? (tipsTotal / turnoverTotal) * 100 : null;
+  if (shiftTotalRow) {
+    turnoverTotal = Number(shiftTotalRow.bill_total || 0);
+    tipsTotal = Number(shiftTotalRow.tip_amount || 0);
+  }
+
+  const tipPct = computeTipPercentage(turnoverTotal, tipsTotal);
   const tipsPerHour = durationHours > 0 ? tipsTotal / durationHours : null;
 
   return {
@@ -143,6 +175,7 @@ export default function WaiteringPage() {
   const [tables, setTables] = useState([]);
   const [pastShifts, setPastShifts] = useState([]);
   const [tableForm, setTableForm] = useState(initialTableForm);
+  const [shiftFinanceForm, setShiftFinanceForm] = useState(initialShiftFinanceForm);
   const [fileInputKey, setFileInputKey] = useState(0);
   const [startingShift, setStartingShift] = useState(false);
   const [endingShift, setEndingShift] = useState(false);
@@ -157,6 +190,8 @@ export default function WaiteringPage() {
   const [shiftEditMinutes, setShiftEditMinutes] = useState('');
   const [savingShiftSummary, setSavingShiftSummary] = useState(false);
   const [shiftEditError, setShiftEditError] = useState(null);
+  const [savingShiftFinance, setSavingShiftFinance] = useState(false);
+  const [shiftFinanceError, setShiftFinanceError] = useState(null);
 
   const addFormRef = useRef(null);
 
@@ -196,7 +231,7 @@ export default function WaiteringPage() {
     if (ids.length) {
       const { data: tableData, error: tablesError } = await supabase
         .from('waiter_tables')
-        .select('shift_id, guests, bill_total, tip_amount')
+        .select('shift_id, table_number, guests, bill_total, tip_amount')
         .in('shift_id', ids);
       if (tablesError) throw tablesError;
       (tableData || []).forEach((row) => {
@@ -267,6 +302,25 @@ export default function WaiteringPage() {
   }, [selectedShift?.id]);
 
   useEffect(() => {
+    if (!selectedShift) {
+      setShiftFinanceForm(initialShiftFinanceForm);
+      setShiftFinanceError(null);
+      return;
+    }
+    const shiftTotalRow = getShiftTotalRow(tables);
+    setShiftFinanceForm(
+      shiftTotalRow
+        ? {
+            bill_total: shiftTotalRow.bill_total != null ? String(shiftTotalRow.bill_total) : '',
+            tip_amount: shiftTotalRow.tip_amount != null ? String(shiftTotalRow.tip_amount) : '',
+            notes: shiftTotalRow.notes || '',
+          }
+        : initialShiftFinanceForm
+    );
+    setShiftFinanceError(null);
+  }, [selectedShift, tables]);
+
+  useEffect(() => {
     if (selectedShift) return;
     if (activeShift) {
       setSelectedShift(activeShift);
@@ -290,6 +344,13 @@ export default function WaiteringPage() {
   const selectedSummary = useMemo(
     () => (selectedShift ? computeShiftSummary(selectedShift, tables, nowTs) : null),
     [selectedShift, tables, nowTs]
+  );
+
+  const selectedShiftTotalRow = useMemo(() => getShiftTotalRow(tables), [tables]);
+  const selectedShiftDetailRows = useMemo(() => getShiftDetailRows(tables), [tables]);
+  const financeTipPct = useMemo(
+    () => computeTipPercentage(shiftFinanceForm.bill_total, shiftFinanceForm.tip_amount),
+    [shiftFinanceForm.bill_total, shiftFinanceForm.tip_amount]
   );
 
   const canEditShiftSummary = Boolean(
@@ -588,6 +649,73 @@ export default function WaiteringPage() {
     }
   }
 
+  async function handleSaveShiftFinance(e) {
+    e.preventDefault();
+    if (!user || !selectedShift) {
+      setShiftFinanceError('Select a shift first.');
+      return;
+    }
+    if (!['active', 'completed'].includes(selectedShift.status)) {
+      setShiftFinanceError('You can only save records for active or completed shifts.');
+      return;
+    }
+
+    const billTotal = Number(shiftFinanceForm.bill_total || 0);
+    const tipAmount = Number(shiftFinanceForm.tip_amount || 0);
+    if (!Number.isFinite(billTotal) || billTotal < 0) {
+      setShiftFinanceError('Enter a valid bill total.');
+      return;
+    }
+    if (!Number.isFinite(tipAmount) || tipAmount < 0) {
+      setShiftFinanceError('Enter a valid tip amount.');
+      return;
+    }
+
+    setSavingShiftFinance(true);
+    setShiftFinanceError(null);
+    try {
+      const payload = {
+        user_id: user.id,
+        shift_id: selectedShift.id,
+        table_number: SHIFT_TOTAL_TABLE_NUMBER,
+        guests: 0,
+        bill_total: billTotal,
+        tip_amount: tipAmount,
+        payment_method: 'mixed',
+        screenshot_url: null,
+        notes: shiftFinanceForm.notes?.trim() || null,
+        self_state: null,
+        table_vibe: null,
+        system_load: null,
+        issue_source: null,
+        group_type: null,
+      };
+
+      if (selectedShiftTotalRow) {
+        const { error } = await supabase
+          .from('waiter_tables')
+          .update({
+            bill_total: payload.bill_total,
+            tip_amount: payload.tip_amount,
+            notes: payload.notes,
+          })
+          .eq('id', selectedShiftTotalRow.id)
+          .eq('user_id', user.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('waiter_tables').insert(payload);
+        if (error) throw error;
+      }
+
+      await loadTablesForShift(selectedShift.id);
+      await loadPastShifts(user);
+    } catch (error) {
+      setShiftFinanceError(error?.message || 'Unable to save shift record.');
+    } finally {
+      setSavingShiftFinance(false);
+    }
+  }
+
   async function handleAddTable(e) {
     e.preventDefault();
     if (!user || !selectedShift) {
@@ -763,28 +891,19 @@ export default function WaiteringPage() {
               onClick={handleEndShift}
               disabled={endingShift}
             >
-              {endingShift ? 'Ending...' : 'End track'}
+              {endingShift ? 'Clocking out...' : 'Clock out'}
             </button>
           </div>
         }
       >
         {activeSummary ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
-            <SummaryTile label="Tables" value={activeSummary.tablesCount} />
-            <SummaryTile label="Guests" value={activeSummary.guestsTotal} />
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+            <SummaryTile label="Duration" value={formatDurationHours(activeSummary.durationHours)} />
             <SummaryTile label="Turnover" value={formatCurrency(activeSummary.turnoverTotal)} />
             <SummaryTile label="Tips" value={formatCurrency(activeSummary.tipsTotal)} />
             <SummaryTile
               label="Tip %"
               value={activeSummary.tipPct != null ? `${activeSummary.tipPct.toFixed(1)}%` : '--'}
-            />
-            <SummaryTile
-              label="Tips/hr"
-              value={
-                activeSummary.tipsPerHour != null && Number.isFinite(activeSummary.tipsPerHour)
-                  ? formatCurrency(activeSummary.tipsPerHour)
-                  : '--'
-              }
             />
           </div>
         ) : (
@@ -801,7 +920,7 @@ export default function WaiteringPage() {
       <div className="mx-auto max-w-6xl space-y-8">
         <div className="space-y-2">
           <h1 className="text-2xl font-semibold text-text">Waitering</h1>
-          <p className="text-sm text-text/70">Track your hours, tables, and tips.</p>
+          <p className="text-sm text-text/70">Clock in, clock out, log turnover and retained cash.</p>
         </div>
 
         {loadError && (
@@ -829,7 +948,7 @@ export default function WaiteringPage() {
                   onClick={handleStartShift}
                   disabled={startingShift}
                 >
-                  {startingShift ? 'Starting...' : 'Get to work'}
+                  {startingShift ? 'Clocking in...' : 'Clock in'}
                 </button>
                 <p className="text-sm text-text/70">No active shift. Start one to begin tracking.</p>
               </div>
@@ -842,10 +961,8 @@ export default function WaiteringPage() {
                 title="Shift summary"
                 subtitle={formatShiftDate(justCompletedSummary.shift?.start_time)}
               >
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                   <SummaryTile label="Duration" value={formatDurationHours(justCompletedSummary.summary.durationHours)} />
-                  <SummaryTile label="Tables" value={justCompletedSummary.summary.tablesCount} />
-                  <SummaryTile label="Guests" value={justCompletedSummary.summary.guestsTotal} />
                   <SummaryTile
                     label="Turnover"
                     value={formatCurrency(justCompletedSummary.summary.turnoverTotal)}
@@ -868,7 +985,7 @@ export default function WaiteringPage() {
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <h3 className="text-lg font-semibold text-text">
-                      Tables for shift: {formatShiftDate(selectedShift.start_time)}
+                      Shift record: {formatShiftDate(selectedShift.start_time)}
                     </h3>
                     <div className="text-sm text-text/70">
                       Status: {selectedShift.status || 'unknown'}
@@ -953,28 +1070,89 @@ export default function WaiteringPage() {
                 ) : null}
 
                 {selectedSummary ? (
-                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
-                    <SummaryTile label="Tables" value={selectedSummary.tablesCount} />
-                    <SummaryTile label="Guests" value={selectedSummary.guestsTotal} />
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                    <SummaryTile label="Duration" value={formatDurationHours(selectedSummary.durationHours)} />
                     <SummaryTile label="Turnover" value={formatCurrency(selectedSummary.turnoverTotal)} />
                     <SummaryTile label="Tips" value={formatCurrency(selectedSummary.tipsTotal)} />
                     <SummaryTile
                       label="Tip %"
                       value={selectedSummary.tipPct != null ? `${selectedSummary.tipPct.toFixed(1)}%` : '--'}
                     />
-                    <SummaryTile
-                      label="Tips/hr"
-                      value={
-                        selectedSummary.tipsPerHour != null && Number.isFinite(selectedSummary.tipsPerHour)
-                          ? formatCurrency(selectedSummary.tipsPerHour)
-                          : '--'
-                      }
-                    />
                   </div>
                 ) : null}
 
+                <Card
+                  variant="neutral"
+                  compact={false}
+                  title="Daily shift record"
+                  subtitle="Save the shift-level totals. Table details can stay in notes for now."
+                >
+                  <form className="space-y-4" onSubmit={handleSaveShiftFinance}>
+                    <div className="grid gap-3 md:grid-cols-3">
+                      <TextInput
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        label="Bill total / turnover (R)"
+                        value={shiftFinanceForm.bill_total}
+                        onChange={(e) =>
+                          setShiftFinanceForm((prev) => ({ ...prev, bill_total: e.target.value }))
+                        }
+                        placeholder="4500.00"
+                        disabled={savingShiftFinance}
+                      />
+                      <TextInput
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        label="Tip amount / retained cash (R)"
+                        value={shiftFinanceForm.tip_amount}
+                        onChange={(e) =>
+                          setShiftFinanceForm((prev) => ({ ...prev, tip_amount: e.target.value }))
+                        }
+                        placeholder="450.00"
+                        disabled={savingShiftFinance}
+                      />
+                      <div className="rounded-lg border border-white/20 bg-white/50 px-3 py-2 shadow-sm">
+                        <div className="text-[11px] uppercase tracking-wide text-text/60">Calculated tip %</div>
+                        <div className="text-base font-semibold text-text">
+                          {financeTipPct != null ? `${financeTipPct.toFixed(1)}%` : '--'}
+                        </div>
+                      </div>
+                    </div>
+                    <TextAreaAuto
+                      label="Notes"
+                      placeholder="Optional context: busy section, cash retained, weird payments, anything worth remembering."
+                      value={shiftFinanceForm.notes}
+                      onChange={(e) => setShiftFinanceForm((prev) => ({ ...prev, notes: e.target.value }))}
+                      maxRows={4}
+                      disabled={savingShiftFinance}
+                    />
+                    {shiftFinanceError ? (
+                      <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+                        {shiftFinanceError}
+                      </div>
+                    ) : null}
+                    <button
+                      type="submit"
+                      className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:brightness-110 disabled:opacity-70"
+                      disabled={savingShiftFinance}
+                    >
+                      {savingShiftFinance ? 'Saving...' : 'Save shift record'}
+                    </button>
+                  </form>
+                </Card>
+
                 {selectedShift ? (
-                  <div ref={addFormRef}>
+                  <details className="rounded-xl border border-slate-200 bg-white/70 p-4 shadow-sm">
+                    <summary className="cursor-pointer text-sm font-semibold text-text">
+                      Advanced table entries
+                      {selectedShiftDetailRows.length ? ` (${selectedShiftDetailRows.length})` : ''}
+                    </summary>
+                    <p className="mt-2 text-xs text-text/70">
+                      Legacy per-table logging is still available, but daily tracking now uses the shift record above.
+                    </p>
+                    <div ref={addFormRef} className="mt-4">
                     <Card
                       variant="neutral"
                       compact={false}
@@ -1229,19 +1407,22 @@ export default function WaiteringPage() {
                       </form>
                     </Card>
                   </div>
-                ) : null}
 
-                <div className="grid gap-3 md:grid-cols-2">
-                  {tables.map((table) => (
-                    <WaiterTableCard
-                      key={table.id}
-                      table={table}
-                      onEdit={beginEditTable}
-                      onDelete={handleDeleteTable}
-                    />
-                  ))}
-                </div>
-                {!tables.length && <div className="text-sm text-text/70">No tables logged yet.</div>}
+                    <div className="mt-4 grid gap-3 md:grid-cols-2">
+                      {selectedShiftDetailRows.map((table) => (
+                        <WaiterTableCard
+                          key={table.id}
+                          table={table}
+                          onEdit={beginEditTable}
+                          onDelete={handleDeleteTable}
+                        />
+                      ))}
+                    </div>
+                    {!selectedShiftDetailRows.length && (
+                      <div className="mt-3 text-sm text-text/70">No table-level entries logged.</div>
+                    )}
+                  </details>
+                ) : null}
               </div>
             ) : null}
 
@@ -1259,7 +1440,7 @@ export default function WaiteringPage() {
                       compact={false}
                       title={formatShiftDate(shift.start_time)}
                       subtitle={shift.branch || DEFAULT_BRANCH}
-                      meta={`${formatDurationHours(summary.durationHours)} | ${summary.tablesCount} tables`}
+                      meta={formatDurationHours(summary.durationHours)}
                       interactive
                       selected={selectedShift?.id === shift.id}
                       onClick={() => setSelectedShift(shift)}
@@ -1271,7 +1452,7 @@ export default function WaiteringPage() {
                           label="Tip %"
                           value={summary.tipPct != null ? `${summary.tipPct.toFixed(1)}%` : '--'}
                         />
-                        <SummaryTile label="Guests" value={summary.guestsTotal} />
+                        <SummaryTile label="Duration" value={formatDurationHours(summary.durationHours)} />
                       </div>
                       <div className="mt-3 flex justify-end">
                         <button

@@ -36,6 +36,12 @@ const PORTAL_LINKS = [
     copy: 'The first real-world tracking zone, reserved for practice and visible momentum.',
     accent: '#f59e0b',
   },
+  {
+    href: '/finance',
+    title: 'Finance OS',
+    copy: 'A lightweight money movement surface for cashups, retained cash, income, and expenses.',
+    accent: '#34d399',
+  },
 ];
 
 export default function CharacterPortalPage() {
