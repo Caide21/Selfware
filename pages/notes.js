@@ -4,8 +4,11 @@ import { usePageHeading } from '@/components/Layout/PageShell';
 import InteractionTarget from '@/components/InteractionLayer/InteractionTarget';
 import ExpandableCardBody from '@/components/CardKit/ExpandableCardBody';
 import { TextAreaAuto } from '@/components/Form';
+import CommandKeyDrawer from '@/components/Notes/CommandKeyDrawer';
+import GhostButton from '@/components/ui/GhostButton';
 import PrimaryButton from '@/components/ui/PrimaryButton';
 import { createNoteInteractionTarget } from '@/lib/interactions/noteTargets';
+import { createFinanceTransactionRow, parseFinanceCommand } from '@/lib/financeCommands';
 import { parseNoteCommand } from '@/lib/parseNoteCommand';
 import { supabase } from '@/lib/supabaseClient';
 
@@ -29,27 +32,115 @@ function formatNoteTimestamp(value) {
   }).format(date);
 }
 
-function NoteFragment({ note, actionContext }) {
+function NoteFragment({ note, actionContext, onUpdateNote }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [draft, setDraft] = useState(note?.content || '');
+  const [isSaving, setIsSaving] = useState(false);
+  const [editError, setEditError] = useState(null);
   const timestamp = formatNoteTimestamp(note?.created_at);
   const interactionTarget = createNoteInteractionTarget(note);
+
+  useEffect(() => {
+    if (!isEditing) setDraft(note?.content || '');
+  }, [isEditing, note?.content]);
+
+  const handleStartEdit = () => {
+    setDraft(note?.content || '');
+    setEditError(null);
+    setIsEditing(true);
+  };
+
+  const handleCancelEdit = () => {
+    setDraft(note?.content || '');
+    setEditError(null);
+    setIsEditing(false);
+  };
+
+  const handleSaveEdit = async () => {
+    const nextContent = draft.trim();
+    if (!nextContent) {
+      setEditError('Notes need content before they can land.');
+      return;
+    }
+
+    setIsSaving(true);
+    setEditError(null);
+
+    try {
+      await onUpdateNote(note.id, nextContent);
+      setIsEditing(false);
+    } catch (updateError) {
+      console.error('Failed to update note', updateError);
+      setEditError(updateError?.message || 'Could not update note. Small chaos detected.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <InteractionTarget target={interactionTarget} actionContext={actionContext}>
       <article className="group inline-flex max-w-full flex-col gap-1 rounded-md px-2.5 py-2 transition hover:bg-white/5 hover:shadow-[0_0_20px_rgba(148,163,184,0.12)]">
-        <ExpandableCardBody
-          contentClassName="whitespace-pre-wrap break-words text-sm leading-relaxed text-text/85"
-          maxHeightClassName="max-h-40"
-        >
-          {note.content}
-        </ExpandableCardBody>
-        {timestamp ? (
-          <time
-            dateTime={note.created_at}
-            className="text-[11px] leading-none text-text/35 transition group-hover:text-text/50"
-          >
-            {timestamp}
-          </time>
-        ) : null}
+        {isEditing ? (
+          <div className="w-full min-w-[min(32rem,calc(100vw-3rem))] space-y-2" onContextMenu={(event) => event.stopPropagation()}>
+            <TextAreaAuto
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              maxRows={10}
+              disabled={isSaving}
+              className="min-h-[96px] border-white/10 bg-white/10 px-3 py-2.5 text-sm leading-relaxed text-text caret-cta-accent placeholder:text-text/35 focus:border-cta-accent focus:ring-cta-accent/25"
+              aria-label="Edit note content"
+            />
+            {editError ? (
+              <div className="rounded-md border border-red-400/25 bg-red-500/10 px-3 py-2 text-xs text-red-100">
+                {editError}
+              </div>
+            ) : null}
+            <div className="flex flex-wrap items-center gap-2">
+              <PrimaryButton
+                type="button"
+                onClick={handleSaveEdit}
+                disabled={isSaving || !draft.trim()}
+                className="px-3 py-1.5 text-xs disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isSaving ? 'Saving...' : 'Save'}
+              </PrimaryButton>
+              <GhostButton
+                type="button"
+                onClick={handleCancelEdit}
+                disabled={isSaving}
+                className="px-3 py-1.5 text-xs text-text/80 ring-white/15 hover:ring-white/30 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Cancel
+              </GhostButton>
+            </div>
+          </div>
+        ) : (
+          <>
+            <ExpandableCardBody
+              contentClassName="whitespace-pre-wrap break-words text-sm leading-relaxed text-text/85"
+              maxHeightClassName="max-h-40"
+            >
+              {note.content}
+            </ExpandableCardBody>
+            <div className="flex flex-wrap items-center gap-2">
+              {timestamp ? (
+                <time
+                  dateTime={note.created_at}
+                  className="text-[11px] leading-none text-text/35 transition group-hover:text-text/50"
+                >
+                  {timestamp}
+                </time>
+              ) : null}
+              <button
+                type="button"
+                onClick={handleStartEdit}
+                className="rounded px-1.5 py-0.5 text-[11px] leading-none text-text/35 transition hover:bg-white/10 hover:text-text/75 focus:bg-white/10 focus:text-text/75 focus:outline-none"
+              >
+                Edit
+              </button>
+            </div>
+          </>
+        )}
       </article>
     </InteractionTarget>
   );
@@ -213,6 +304,7 @@ export default function NotesPage() {
 
     try {
       const parsed = parseNoteCommand(trimmed);
+      const financeParsed = parseFinanceCommand(trimmed);
       const { data, error: insertError } = await supabase
         .from('notes')
         .insert({
@@ -247,6 +339,23 @@ export default function NotesPage() {
         }
       }
 
+      const financeTransaction = createFinanceTransactionRow({
+        parsed: financeParsed,
+        ownerId: user.id,
+        sourceNote: data,
+      });
+
+      if (financeTransaction) {
+        const { error: financeInsertError } = await supabase
+          .from('finance_transactions')
+          .insert(financeTransaction);
+
+        if (financeInsertError) {
+          console.error('Failed to create finance transaction', financeInsertError);
+          setWarning('Note saved, but the finance transaction could not be structured yet.');
+        }
+      }
+
       setNotes((current) => [data, ...current]);
       setContent('');
     } catch (insertError) {
@@ -257,9 +366,32 @@ export default function NotesPage() {
     }
   };
 
+  const handleUpdateNote = async (noteId, nextContent) => {
+    if (!user?.id) {
+      throw new Error('Sign in required to edit notes.');
+    }
+
+    const trimmed = nextContent.trim();
+    if (!trimmed) {
+      throw new Error('Notes need content before they can land.');
+    }
+
+    const { data, error: updateError } = await supabase
+      .from('notes')
+      .update({ content: trimmed })
+      .eq('id', noteId)
+      .eq('owner_id', user.id)
+      .select('*')
+      .single();
+
+    if (updateError) throw updateError;
+
+    setNotes((current) => current.map((note) => (note.id === noteId ? data : note)));
+  };
+
   const showSignInRequired = !authLoading && !user;
   const showEmpty = !authLoading && !notesLoading && user && notes.length === 0;
-  const parsedCommand = parseNoteCommand(content);
+  const parsedCommand = parseFinanceCommand(content) || parseNoteCommand(content);
   const actionContext = {
     supabase,
     onDeleteNote: (noteId) => {
@@ -283,6 +415,8 @@ export default function NotesPage() {
             disabled={authLoading || !user || saving}
             className="border-white/10 bg-white/5 text-text placeholder:text-text/35 focus:border-cta-accent focus:ring-cta-accent/25"
           />
+
+          <CommandKeyDrawer />
 
           <ParsedCommandPreview parsed={parsedCommand} />
 
@@ -323,7 +457,12 @@ export default function NotesPage() {
         {notes.length > 0 ? (
           <div className="flex flex-col items-start gap-1.5">
             {notes.map((note) => (
-              <NoteFragment key={note.id} note={note} actionContext={actionContext} />
+              <NoteFragment
+                key={note.id}
+                note={note}
+                actionContext={actionContext}
+                onUpdateNote={handleUpdateNote}
+              />
             ))}
           </div>
         ) : null}

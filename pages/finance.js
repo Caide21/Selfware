@@ -1,58 +1,24 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
+import Link from 'next/link';
 import Card from '@/components/CardKit/Card';
-import { TextAreaAuto, TextInput } from '@/components/Form';
 import { usePageHeading } from '@/components/Layout/PageShell';
+import { supabase } from '@/lib/supabaseClient';
 
 const PAGE_HEADING = {
   emoji: '',
   title: 'Finance OS',
-  subtitle: 'Track visible money movement from cashups, retained cash, income, and expenses.',
+  subtitle: 'Structured money movement from Notes commands.',
 };
 
-const PEOPLE = ['Caide', 'Justin'];
-const FILTERS = ['Combined', 'Caide', 'Justin'];
+const MOVE_OUT_TARGET = 55000;
+const MONTHLY_COST_TARGET = 24550;
+const INCOME_TARGET = 28000;
 
-const initialIncomeForm = {
-  date: '',
-  person: 'Caide',
-  source: '',
-  amount: '',
-  cashRetained: '',
-  notes: '',
-};
-
-const initialExpenseForm = {
-  date: '',
-  person: 'Caide',
-  category: '',
-  amount: '',
-  paymentMethod: 'cash',
-  notes: '',
-};
-
-const starterEntries = [
-  {
-    id: 'sample-income-1',
-    type: 'income',
-    date: '2026-04-29',
-    person: 'Caide',
-    label: 'Bossa cashup',
-    amount: 860,
-    cashRetained: 320,
-    notes: 'Sample local entry. Replace once backend storage is ready.',
-  },
-  {
-    id: 'sample-expense-1',
-    type: 'expense',
-    date: '2026-04-29',
-    person: 'Justin',
-    label: 'Groceries',
-    amount: 240,
-    paymentMethod: 'card',
-    notes: 'Sample shared expense.',
-  },
-];
+function amountValue(value) {
+  const num = Number(value || 0);
+  return Number.isFinite(num) ? num : 0;
+}
 
 function formatCurrency(amount) {
   const num = Number(amount || 0);
@@ -60,118 +26,189 @@ function formatCurrency(amount) {
   return `R ${num.toFixed(2)}`;
 }
 
-function todayKey() {
-  return new Date().toISOString().slice(0, 10);
+function formatDate(value) {
+  if (!value) return '';
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  }).format(date);
 }
 
-function moneyValue(value) {
-  const num = Number(value || 0);
-  return Number.isFinite(num) ? num : 0;
+function monthKey(value) {
+  if (!value) return '';
+  return String(value).slice(0, 7);
 }
 
-function SummaryTile({ label, value, hint }) {
+function currentMonthKey() {
+  return new Date().toISOString().slice(0, 7);
+}
+
+function clampPercent(value) {
+  if (!Number.isFinite(value)) return 0;
+  return Math.max(0, Math.min(100, value));
+}
+
+function ProgressBar({ value, tone = 'emerald' }) {
+  const width = `${clampPercent(value)}%`;
+  const color = tone === 'rose' ? 'bg-rose-500' : tone === 'amber' ? 'bg-amber-400' : 'bg-emerald-400';
+
   return (
-    <div className="h-full rounded-lg border border-white/20 bg-white/55 px-4 py-3 text-left shadow-sm">
-      <div className="text-[11px] uppercase tracking-wide text-text/55">{label}</div>
-      <div className="mt-2 text-2xl font-semibold text-text">{value}</div>
-      {hint ? <div className="mt-1 text-xs text-text/60">{hint}</div> : null}
+    <div className="mt-3 h-2 overflow-hidden rounded-full bg-white/45">
+      <div className={`h-full rounded-full ${color}`} style={{ width }} />
     </div>
   );
 }
 
-function FilterButton({ active, children, onClick }) {
+function SummaryTile({ label, value, hint, accent = 'text-text' }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={[
-        'rounded-full border px-3 py-1.5 text-sm font-semibold transition',
-        active
-          ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
-          : 'border-slate-200 bg-white text-text/70 hover:bg-slate-50',
-      ].join(' ')}
-    >
-      {children}
-    </button>
+    <div className="h-full rounded-lg border border-white/20 bg-white/55 px-4 py-3 shadow-sm">
+      <div className="text-[11px] uppercase tracking-wide text-text/60">{label}</div>
+      <div className={`mt-2 text-2xl font-semibold ${accent}`}>{value}</div>
+      {hint ? <div className="mt-1 text-xs leading-relaxed text-text/60">{hint}</div> : null}
+    </div>
+  );
+}
+
+function TargetCard({ label, value, target, hint, tone }) {
+  const percent = target > 0 ? (value / target) * 100 : 0;
+
+  return (
+    <div className="rounded-lg border border-white/20 bg-white/55 px-4 py-3 shadow-sm">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-[11px] uppercase tracking-wide text-text/60">{label}</div>
+          <div className="mt-2 text-xl font-semibold text-text">{formatCurrency(value)}</div>
+        </div>
+        <div className="rounded-full border border-white/30 bg-white/55 px-2 py-1 text-xs font-semibold text-text/70">
+          {clampPercent(percent).toFixed(0)}%
+        </div>
+      </div>
+      <ProgressBar value={percent} tone={tone} />
+      <div className="mt-2 text-xs leading-relaxed text-text/60">
+        Target: {formatCurrency(target)}. {hint}
+      </div>
+    </div>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white/60 px-4 py-5 text-sm leading-relaxed text-text/70">
+      No finance transactions found yet. Capture money movement in Notes with{' '}
+      <span className="font-semibold text-text">/income</span>,{' '}
+      <span className="font-semibold text-text">/expense</span>, or{' '}
+      <span className="font-semibold text-text">/savings</span>.
+    </div>
   );
 }
 
 export default function FinancePage() {
-  const [filter, setFilter] = useState('Combined');
-  const [entries, setEntries] = useState(starterEntries);
-  const [incomeForm, setIncomeForm] = useState(initialIncomeForm);
-  const [expenseForm, setExpenseForm] = useState(initialExpenseForm);
+  const [user, setUser] = useState(null);
+  const [transactions, setTransactions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(null);
 
   usePageHeading(PAGE_HEADING);
 
-  const visibleEntries = useMemo(
-    () => entries.filter((entry) => filter === 'Combined' || entry.person === filter),
-    [entries, filter]
-  );
+  const loadFinanceTransactions = useCallback(async (ownerId) => {
+    if (!ownerId) {
+      setTransactions([]);
+      return;
+    }
+
+    setLoadError(null);
+    const { data, error } = await supabase
+      .from('finance_transactions')
+      .select('id, owner_id, source_note_id, type, amount, category, description, occurred_on, created_at')
+      .eq('owner_id', ownerId)
+      .order('occurred_on', { ascending: false })
+      .order('created_at', { ascending: false })
+      .limit(200);
+
+    if (error) throw error;
+    setTransactions(data || []);
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const bootstrap = async () => {
+      setLoading(true);
+      setLoadError(null);
+
+      try {
+        const { data, error } = await supabase.auth.getUser();
+        if (error) throw error;
+        if (cancelled) return;
+
+        const resolvedUser = data?.user ?? null;
+        setUser(resolvedUser);
+
+        if (resolvedUser?.id) {
+          await loadFinanceTransactions(resolvedUser.id);
+        } else {
+          setTransactions([]);
+        }
+      } catch (error) {
+        if (!cancelled) setLoadError(error?.message || 'Could not load finance transactions.');
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+
+    bootstrap();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loadFinanceTransactions]);
 
   const summary = useMemo(() => {
-    const today = todayKey();
-    const todayEntries = visibleEntries.filter((entry) => entry.date === today);
-    const todayEarned = todayEntries
-      .filter((entry) => entry.type === 'income')
-      .reduce((total, entry) => total + moneyValue(entry.amount), 0);
-    const todaySpent = todayEntries
-      .filter((entry) => entry.type === 'expense')
-      .reduce((total, entry) => total + moneyValue(entry.amount), 0);
-    const netCash = visibleEntries.reduce((total, entry) => {
-      if (entry.type === 'income') return total + moneyValue(entry.cashRetained || entry.amount);
-      return total - moneyValue(entry.amount);
-    }, 0);
-    const monthProjected = visibleEntries.reduce((total, entry) => {
-      if (entry.type === 'income') return total + moneyValue(entry.amount);
-      return total - moneyValue(entry.amount);
-    }, 0);
+    const currentMonth = currentMonthKey();
+    const totals = transactions.reduce(
+      (next, transaction) => {
+        const amount = amountValue(transaction.amount);
+        if (transaction.type === 'income') next.income += amount;
+        if (transaction.type === 'expense') next.expenses += amount;
+        if (transaction.type === 'savings') next.savings += amount;
 
-    return { todayEarned, todaySpent, netCash, monthProjected };
-  }, [visibleEntries]);
+        if (monthKey(transaction.occurred_on) === currentMonth) {
+          if (transaction.type === 'income') next.monthIncome += amount;
+          if (transaction.type === 'expense') next.monthExpenses += amount;
+          if (transaction.type === 'savings') next.monthSavings += amount;
+        }
 
-  function handleAddIncome(e) {
-    e.preventDefault();
-    const amount = moneyValue(incomeForm.amount);
-    const cashRetained = moneyValue(incomeForm.cashRetained);
-    if (!incomeForm.date || !incomeForm.source || amount <= 0) return;
+        if (transaction.type === 'income' && transaction.occurred_on) {
+          const key = monthKey(transaction.occurred_on);
+          next.incomeByMonth[key] = (next.incomeByMonth[key] || 0) + amount;
+        }
 
-    setEntries((prev) => [
-      {
-        id: `income-${Date.now()}`,
-        type: 'income',
-        date: incomeForm.date,
-        person: incomeForm.person,
-        label: incomeForm.source,
-        amount,
-        cashRetained,
-        notes: incomeForm.notes,
+        return next;
       },
-      ...prev,
-    ]);
-    setIncomeForm(initialIncomeForm);
-  }
-
-  function handleAddExpense(e) {
-    e.preventDefault();
-    const amount = moneyValue(expenseForm.amount);
-    if (!expenseForm.date || !expenseForm.category || amount <= 0) return;
-
-    setEntries((prev) => [
       {
-        id: `expense-${Date.now()}`,
-        type: 'expense',
-        date: expenseForm.date,
-        person: expenseForm.person,
-        label: expenseForm.category,
-        amount,
-        paymentMethod: expenseForm.paymentMethod,
-        notes: expenseForm.notes,
-      },
-      ...prev,
-    ]);
-    setExpenseForm(initialExpenseForm);
-  }
+        income: 0,
+        expenses: 0,
+        savings: 0,
+        monthIncome: 0,
+        monthExpenses: 0,
+        monthSavings: 0,
+        incomeByMonth: {},
+      }
+    );
+
+    const incomeMonths = Object.keys(totals.incomeByMonth);
+    const averageIncome = incomeMonths.length ? totals.income / incomeMonths.length : 0;
+
+    return {
+      ...totals,
+      net: totals.income - totals.expenses - totals.savings,
+      averageIncome,
+      incomeMonths: incomeMonths.length,
+    };
+  }, [transactions]);
 
   return (
     <>
@@ -181,197 +218,155 @@ export default function FinancePage() {
 
       <section className="mx-auto max-w-6xl space-y-6">
         <Card
-          title="Today's Cash Position"
-          subtitle="Frontend skeleton with local entries only"
           variant="neutral"
+          compact={false}
+          title="Financial OS"
+          subtitle="Notes capture the raw signal; structured transactions power the dashboard."
           accent="#34d399"
           className="text-left"
-          rightSlot={
-            <div className="flex flex-wrap justify-end gap-2">
-              {FILTERS.map((item) => (
-                <FilterButton key={item} active={filter === item} onClick={() => setFilter(item)}>
-                  {item}
-                </FilterButton>
-              ))}
-            </div>
-          }
         >
-          <div className="grid gap-3 md:grid-cols-4">
-            <SummaryTile label="Today earned" value={formatCurrency(summary.todayEarned)} />
-            <SummaryTile label="Today spent" value={formatCurrency(summary.todaySpent)} />
-            <SummaryTile label="Net cash" value={formatCurrency(summary.netCash)} hint="Retained cash minus expenses" />
-            <SummaryTile label="Month projected" value={formatCurrency(summary.monthProjected)} hint="Local estimate" />
+          <div className="flex flex-col gap-3 text-sm leading-relaxed text-text/75 sm:flex-row sm:items-center sm:justify-between">
+            <p>
+              Capture with <span className="font-semibold">/income</span>,{' '}
+              <span className="font-semibold">/expense</span>, or{' '}
+              <span className="font-semibold">/savings</span>. Finance rows are created from those notes.
+            </p>
+            <Link
+              href="/notes"
+              className="inline-flex shrink-0 items-center justify-center rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:brightness-110"
+            >
+              Capture in Notes
+            </Link>
           </div>
         </Card>
 
-        <div className="grid gap-5 lg:grid-cols-2">
-          <Card title="Add Income" subtitle="Cashups, retained cash, sales, transfers" variant="neutral" compact={false}>
-            <form className="space-y-4" onSubmit={handleAddIncome}>
-              <div className="grid gap-3 md:grid-cols-2">
-                <TextInput
-                  required
-                  type="date"
-                  label="Date"
-                  value={incomeForm.date}
-                  onChange={(e) => setIncomeForm((prev) => ({ ...prev, date: e.target.value }))}
-                />
-                <label className="block space-y-1">
-                  <span className="block text-sm font-medium text-text">Person</span>
-                  <select
-                    className="min-h-[40px] w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-text transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
-                    value={incomeForm.person}
-                    onChange={(e) => setIncomeForm((prev) => ({ ...prev, person: e.target.value }))}
-                  >
-                    {PEOPLE.map((person) => (
-                      <option key={person} value={person}>
-                        {person}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <TextInput
-                  required
-                  label="Source"
-                  placeholder="Bossa cashup, transfer, side job"
-                  value={incomeForm.source}
-                  onChange={(e) => setIncomeForm((prev) => ({ ...prev, source: e.target.value }))}
-                />
-                <TextInput
-                  required
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  label="Amount (R)"
-                  value={incomeForm.amount}
-                  onChange={(e) => setIncomeForm((prev) => ({ ...prev, amount: e.target.value }))}
-                />
-                <TextInput
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  label="Cash retained (R)"
-                  value={incomeForm.cashRetained}
-                  onChange={(e) => setIncomeForm((prev) => ({ ...prev, cashRetained: e.target.value }))}
-                  hint="Use this when cash kept differs from total income."
-                />
-              </div>
-              <TextAreaAuto
-                label="Notes"
-                maxRows={4}
-                placeholder="Optional detail. Deeper context belongs in Notes."
-                value={incomeForm.notes}
-                onChange={(e) => setIncomeForm((prev) => ({ ...prev, notes: e.target.value }))}
-              />
-              <button className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:brightness-110">
-                Add income
-              </button>
-            </form>
-          </Card>
-
-          <Card title="Add Expense" subtitle="Visible money leaving the system" variant="neutral" compact={false}>
-            <form className="space-y-4" onSubmit={handleAddExpense}>
-              <div className="grid gap-3 md:grid-cols-2">
-                <TextInput
-                  required
-                  type="date"
-                  label="Date"
-                  value={expenseForm.date}
-                  onChange={(e) => setExpenseForm((prev) => ({ ...prev, date: e.target.value }))}
-                />
-                <label className="block space-y-1">
-                  <span className="block text-sm font-medium text-text">Person</span>
-                  <select
-                    className="min-h-[40px] w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-text transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
-                    value={expenseForm.person}
-                    onChange={(e) => setExpenseForm((prev) => ({ ...prev, person: e.target.value }))}
-                  >
-                    {PEOPLE.map((person) => (
-                      <option key={person} value={person}>
-                        {person}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <TextInput
-                  required
-                  label="Category"
-                  placeholder="Food, transport, supplies"
-                  value={expenseForm.category}
-                  onChange={(e) => setExpenseForm((prev) => ({ ...prev, category: e.target.value }))}
-                />
-                <TextInput
-                  required
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  label="Amount (R)"
-                  value={expenseForm.amount}
-                  onChange={(e) => setExpenseForm((prev) => ({ ...prev, amount: e.target.value }))}
-                />
-                <label className="block space-y-1">
-                  <span className="block text-sm font-medium text-text">Payment method</span>
-                  <select
-                    className="min-h-[40px] w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-text transition focus:border-primary focus:outline-none focus:ring-2 focus:ring-primary/40"
-                    value={expenseForm.paymentMethod}
-                    onChange={(e) => setExpenseForm((prev) => ({ ...prev, paymentMethod: e.target.value }))}
-                  >
-                    <option value="cash">Cash</option>
-                    <option value="card">Card</option>
-                    <option value="eft">EFT</option>
-                    <option value="other">Other</option>
-                  </select>
-                </label>
-              </div>
-              <TextAreaAuto
-                label="Notes"
-                maxRows={4}
-                placeholder="Optional detail. Keep the money movement visible."
-                value={expenseForm.notes}
-                onChange={(e) => setExpenseForm((prev) => ({ ...prev, notes: e.target.value }))}
-              />
-              <button className="rounded-full bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow hover:brightness-110">
-                Add expense
-              </button>
-            </form>
-          </Card>
-        </div>
-
-        <Card title="Recent Entries" subtitle={`${filter} view`} variant="neutral" accent="#60a5fa" compact={false}>
-          <div className="space-y-3">
-            {visibleEntries.map((entry) => (
-              <div
-                key={entry.id}
-                className="grid gap-3 rounded-lg border border-slate-200 bg-white/70 p-3 text-sm md:grid-cols-[1fr_auto]"
-              >
-                <div>
-                  <div className="font-semibold text-text">
-                    {entry.label} <span className="text-text/50">- {entry.person}</span>
-                  </div>
-                  <div className="mt-1 text-xs text-text/60">
-                    {entry.date} / {entry.type === 'income' ? 'Income' : 'Expense'}
-                    {entry.paymentMethod ? ` / ${entry.paymentMethod}` : ''}
-                    {entry.cashRetained ? ` / retained ${formatCurrency(entry.cashRetained)}` : ''}
-                  </div>
-                  {entry.notes ? <div className="mt-2 text-xs text-text/70">{entry.notes}</div> : null}
-                </div>
-                <div
-                  className={[
-                    'text-right text-base font-semibold',
-                    entry.type === 'income' ? 'text-emerald-700' : 'text-rose-700',
-                  ].join(' ')}
-                >
-                  {entry.type === 'income' ? '+' : '-'}
-                  {formatCurrency(entry.amount)}
-                </div>
-              </div>
-            ))}
-            {!visibleEntries.length ? (
-              <div className="rounded-lg border border-slate-200 bg-white/60 p-4 text-sm text-text/70">
-                No entries in this filter yet.
-              </div>
-            ) : null}
+        {loadError ? (
+          <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+            {loadError}
           </div>
-        </Card>
+        ) : null}
+
+        {loading ? <div className="text-sm text-text/60">Loading finance transactions...</div> : null}
+
+        {!loading && !user ? (
+          <div className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-text/80 shadow-sm">
+            Sign in to view finance transactions.
+          </div>
+        ) : null}
+
+        {!loading && user ? (
+          <>
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+              <SummaryTile label="Total income" value={formatCurrency(summary.income)} accent="text-emerald-700" />
+              <SummaryTile label="Total expenses" value={formatCurrency(summary.expenses)} accent="text-rose-700" />
+              <SummaryTile label="Total savings" value={formatCurrency(summary.savings)} accent="text-sky-700" />
+              <SummaryTile
+                label="Unassigned net"
+                value={formatCurrency(summary.net)}
+                hint="Income minus expenses and savings transactions"
+              />
+            </div>
+
+            <div className="grid gap-3 lg:grid-cols-3">
+              <TargetCard
+                label="Move-out progress"
+                value={summary.savings}
+                target={MOVE_OUT_TARGET}
+                hint="Based on total savings transactions."
+                tone="emerald"
+              />
+              <TargetCard
+                label="Monthly cost target"
+                value={summary.monthExpenses}
+                target={MONTHLY_COST_TARGET}
+                hint="Current-month expenses."
+                tone={summary.monthExpenses > MONTHLY_COST_TARGET ? 'rose' : 'amber'}
+              />
+              <TargetCard
+                label="Income target"
+                value={summary.averageIncome}
+                target={INCOME_TARGET}
+                hint={
+                  summary.incomeMonths
+                    ? `Average across ${summary.incomeMonths} month${summary.incomeMonths === 1 ? '' : 's'}.`
+                    : 'No income months recorded yet.'
+                }
+                tone="emerald"
+              />
+            </div>
+
+            <Card
+              variant="neutral"
+              compact={false}
+              title="This month"
+              subtitle="Current calendar month from transaction dates"
+              accent="#60a5fa"
+              className="text-left"
+            >
+              <div className="grid gap-3 md:grid-cols-3">
+                <SummaryTile label="Month income" value={formatCurrency(summary.monthIncome)} />
+                <SummaryTile label="Month expenses" value={formatCurrency(summary.monthExpenses)} />
+                <SummaryTile label="Month savings" value={formatCurrency(summary.monthSavings)} />
+              </div>
+            </Card>
+
+            <Card
+              variant="neutral"
+              compact={false}
+              title="Recent finance transactions"
+              subtitle="Structured rows linked back to source notes when available"
+              accent="#f59e0b"
+              className="text-left"
+            >
+              {transactions.length ? (
+                <div className="space-y-3">
+                  {transactions.slice(0, 25).map((transaction) => (
+                    <article
+                      key={transaction.id}
+                      className="rounded-lg border border-slate-200 bg-white/70 px-3 py-3 shadow-sm"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="rounded-full border border-white/40 bg-white/65 px-2 py-0.5 text-xs font-semibold text-text/75">
+                            {transaction.type}
+                          </span>
+                          <span
+                            className={[
+                              'text-sm font-semibold',
+                              transaction.type === 'income'
+                                ? 'text-emerald-700'
+                                : transaction.type === 'expense'
+                                ? 'text-rose-700'
+                                : 'text-sky-700',
+                            ].join(' ')}
+                          >
+                            {formatCurrency(transaction.amount)}
+                          </span>
+                        </div>
+                        <time className="text-xs text-text/55" dateTime={transaction.occurred_on}>
+                          {formatDate(transaction.occurred_on)}
+                        </time>
+                      </div>
+                      <div className="mt-2 text-sm leading-relaxed text-text/75">
+                        {transaction.category ? (
+                          <span className="font-semibold text-text">{transaction.category}</span>
+                        ) : (
+                          <span className="text-text/50">Uncategorized</span>
+                        )}
+                        {transaction.description ? <span> - {transaction.description}</span> : null}
+                      </div>
+                      {transaction.source_note_id ? (
+                        <div className="mt-2 text-xs text-text/45">Source note linked.</div>
+                      ) : null}
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState />
+              )}
+            </Card>
+          </>
+        ) : null}
       </section>
     </>
   );
