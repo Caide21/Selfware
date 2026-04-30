@@ -1,1483 +1,368 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
+import Link from 'next/link';
 import { supabase } from '@/lib/supabaseClient';
 import { usePageHeading } from '@/components/Layout/PageShell';
-import { TextInput, TextAreaAuto } from '@/components/Form';
 import Card from '@/components/CardKit/Card';
-import WaiterTableCard from '@/components/Waitering/WaiterTableCard';
 
 const PAGE_HEADING = {
   emoji: '',
   title: 'Waitering',
-  subtitle: 'Track clock-in, clock-out, turnover, and retained cash.',
+  subtitle: 'A lens over Notes command events.',
 };
 
-const DEFAULT_BRANCH = 'Bossa Somerset West';
-const SHIFT_TOTAL_TABLE_NUMBER = 'Shift total';
+const WAITING_COMMANDS = ['cashup', 'table'];
+const WAITING_EVENT_TYPES = ['waitering.cashup', 'waitering.table'];
 
-const initialTableForm = {
-  table_number: '',
-  guests: '',
-  bill_total: '',
-  tip_amount: '',
-  payment_method: 'card',
-  screenshotFile: null,
-  notes: '',
-  self_state: '',
-  table_vibe: '',
-  system_load: '',
-  issue_source: '',
-  group_type: '',
-};
-
-const initialShiftFinanceForm = {
-  bill_total: '',
-  tip_amount: '',
-  notes: '',
-};
-
-function formatShiftDate(dateString) {
-  if (!dateString) return '';
-  const d = new Date(dateString);
-  if (Number.isNaN(d.getTime())) return '';
-  return d.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
-}
-
-function formatDurationHours(hours = 0) {
-  const totalMinutes = Math.max(0, Math.round(hours * 60));
-  const h = Math.floor(totalMinutes / 60);
-  const m = totalMinutes % 60;
-  return `${h}h ${m}m`;
+function amountValue(value) {
+  const num = Number(value || 0);
+  return Number.isFinite(num) ? num : 0;
 }
 
 function formatCurrency(amount) {
-  const num = Number(amount ?? 0);
+  const num = Number(amount || 0);
   if (!Number.isFinite(num)) return 'R 0.00';
   return `R ${num.toFixed(2)}`;
 }
 
-function computeTipPercentage(billTotal, tipAmount) {
-  const bill = Number(billTotal || 0);
-  const tip = Number(tipAmount || 0);
-  if (!Number.isFinite(bill) || bill <= 0 || !Number.isFinite(tip)) return null;
-  return (tip / bill) * 100;
+function formatPercent(amount) {
+  const num = Number(amount);
+  if (!Number.isFinite(num)) return '--';
+  return `${num.toFixed(2)}%`;
 }
 
-function getShiftTotalRow(tables = []) {
-  return (tables || []).find((table) => table.table_number === SHIFT_TOTAL_TABLE_NUMBER) || null;
-}
-
-function getShiftDetailRows(tables = []) {
-  return (tables || []).filter((table) => table.table_number !== SHIFT_TOTAL_TABLE_NUMBER);
-}
-
-function toDateInputValue(isoString) {
-  if (!isoString) return '';
-  const date = new Date(isoString);
+function formatTimestamp(value) {
+  if (!value) return '';
+  const date = new Date(value);
   if (Number.isNaN(date.getTime())) return '';
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(date);
 }
 
-function parseDurationToMinutes(hoursValue, minutesValue) {
-  const hoursNum = Number(hoursValue ?? 0);
-  const minutesNum = Number(minutesValue ?? 0);
-  if (!Number.isFinite(hoursNum) || !Number.isFinite(minutesNum)) return null;
-  if (!Number.isInteger(hoursNum) || !Number.isInteger(minutesNum)) return null;
-  if (hoursNum < 0 || minutesNum < 0 || minutesNum > 59) return null;
-  return hoursNum * 60 + minutesNum;
-}
-
-function applyDateToStartTime(startIso, yyyyMmDd) {
-  if (!startIso || !yyyyMmDd) return null;
-  const startDate = new Date(startIso);
-  if (Number.isNaN(startDate.getTime())) return null;
-  const [yearStr, monthStr, dayStr] = yyyyMmDd.split('-');
-  const year = Number(yearStr);
-  const month = Number(monthStr);
-  const day = Number(dayStr);
-  if (!Number.isInteger(year) || !Number.isInteger(month) || !Number.isInteger(day)) return null;
-  return new Date(
-    year,
-    month - 1,
-    day,
-    startDate.getHours(),
-    startDate.getMinutes(),
-    startDate.getSeconds(),
-    startDate.getMilliseconds()
+function isToday(value) {
+  if (!value) return false;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return false;
+  const now = new Date();
+  return (
+    date.getFullYear() === now.getFullYear() &&
+    date.getMonth() === now.getMonth() &&
+    date.getDate() === now.getDate()
   );
 }
 
-function computeEndTimeIso(startDateObj, durationMinutes) {
-  if (!(startDateObj instanceof Date) || Number.isNaN(startDateObj.getTime())) return null;
-  const minutesNum = Number(durationMinutes);
-  if (!Number.isFinite(minutesNum)) return null;
-  return new Date(startDateObj.getTime() + minutesNum * 60 * 1000).toISOString();
+function eventTime(event) {
+  return event?.occurred_at || event?.created_at || '';
 }
 
-function computeShiftSummary(shift, tables = [], nowTs = Date.now()) {
-  const startMs = shift?.start_time ? new Date(shift.start_time).getTime() : null;
-  const endMs = shift?.end_time ? new Date(shift.end_time).getTime() : null;
-  const stopMs = endMs ?? nowTs;
-  const durationHours = startMs ? Math.max(0, (stopMs - startMs) / (1000 * 60 * 60)) : 0;
-  const safeTables = Array.isArray(tables) ? tables : [];
-  const shiftTotalRow = getShiftTotalRow(safeTables);
-  const detailRows = getShiftDetailRows(safeTables);
-  const tablesCount = shiftTotalRow ? detailRows.length : safeTables.length;
+function isCashupEvent(event) {
+  return event?.command === 'cashup' || event?.event_type === 'waitering.cashup';
+}
 
-  let guestsTotal = 0;
-  let turnoverTotal = 0;
-  let tipsTotal = 0;
-  detailRows.forEach((t) => {
-    guestsTotal += Number(t.guests || 0);
-    if (!shiftTotalRow) {
-      turnoverTotal += Number(t.bill_total || 0);
-      tipsTotal += Number(t.tip_amount || 0);
-    }
-  });
+function isTableEvent(event) {
+  return event?.command === 'table' || event?.event_type === 'waitering.table';
+}
 
-  if (shiftTotalRow) {
-    turnoverTotal = Number(shiftTotalRow.bill_total || 0);
-    tipsTotal = Number(shiftTotalRow.tip_amount || 0);
+function summarizeEvent(event) {
+  const amounts = event?.amounts || {};
+  const payload = event?.payload || {};
+
+  if (isCashupEvent(event)) {
+    const turnover = amountValue(amounts.turnover);
+    const retained = amountValue(amounts.retained);
+    const cash = amountValue(amounts.cash);
+    const retainedPercentage =
+      amounts.retainedPercentage != null
+        ? Number(amounts.retainedPercentage)
+        : turnover > 0
+        ? (retained / turnover) * 100
+        : null;
+    return `Cashup: ${formatCurrency(turnover)} turnover, ${formatCurrency(retained)} retained, ${formatCurrency(cash)} cash, ${formatPercent(retainedPercentage)} retained.`;
   }
 
-  const tipPct = computeTipPercentage(turnoverTotal, tipsTotal);
-  const tipsPerHour = durationHours > 0 ? tipsTotal / durationHours : null;
+  if (isTableEvent(event)) {
+    const tableNumber = payload.tableNumber || event.label?.replace(/^Table\s+/i, '') || '';
+    const billTotal = amountValue(amounts.billTotal);
+    const amountTendered = amountValue(amounts.amountTendered);
+    const tip = amounts.tip != null ? Number(amounts.tip) : amountTendered - billTotal;
+    const tipPercentage =
+      amounts.tipPercentage != null ? Number(amounts.tipPercentage) : billTotal > 0 ? (tip / billTotal) * 100 : null;
+    return `Table ${tableNumber}: ${formatCurrency(billTotal)} bill, ${formatCurrency(amountTendered)} tendered, ${formatCurrency(tip)} tip, ${formatPercent(tipPercentage)} tip.`;
+  }
 
-  return {
-    durationHours,
-    tablesCount,
-    guestsTotal,
-    turnoverTotal,
-    tipsTotal,
-    tipPct,
-    tipsPerHour,
-  };
+  return event?.raw || event?.label || 'Waitering event';
 }
 
-function SummaryTile({ label, value }) {
+function SummaryTile({ label, value, hint }) {
   return (
-    <div className="rounded-lg border border-white/20 bg-white/50 px-3 py-2 shadow-sm">
+    <div className="rounded-lg border border-white/20 bg-white/55 px-4 py-3 shadow-sm">
       <div className="text-[11px] uppercase tracking-wide text-text/60">{label}</div>
-      <div className="text-base font-semibold text-text">{value}</div>
+      <div className="mt-1 text-xl font-semibold text-text">{value}</div>
+      {hint ? <div className="mt-1 text-xs text-text/60">{hint}</div> : null}
+    </div>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div className="rounded-lg border border-slate-200 bg-white/60 px-4 py-5 text-sm text-text/70">
+      No waitering events found yet. Capture waitering data in Notes using{' '}
+      <span className="font-semibold text-text">/cashup</span> and{' '}
+      <span className="font-semibold text-text">/table</span> commands.
     </div>
   );
 }
 
 export default function WaiteringPage() {
   const [user, setUser] = useState(null);
+  const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
-  const [activeShift, setActiveShift] = useState(null);
-  const [selectedShift, setSelectedShift] = useState(null);
-  const [tables, setTables] = useState([]);
-  const [pastShifts, setPastShifts] = useState([]);
-  const [tableForm, setTableForm] = useState(initialTableForm);
-  const [shiftFinanceForm, setShiftFinanceForm] = useState(initialShiftFinanceForm);
-  const [fileInputKey, setFileInputKey] = useState(0);
-  const [startingShift, setStartingShift] = useState(false);
-  const [endingShift, setEndingShift] = useState(false);
-  const [addingTable, setAddingTable] = useState(false);
-  const [nowTs, setNowTs] = useState(Date.now());
-  const [justCompletedSummary, setJustCompletedSummary] = useState(null);
-  const [editingTable, setEditingTable] = useState(null);
-  const [removeScreenshot, setRemoveScreenshot] = useState(false);
-  const [isEditingShiftSummary, setIsEditingShiftSummary] = useState(false);
-  const [shiftEditDate, setShiftEditDate] = useState('');
-  const [shiftEditHours, setShiftEditHours] = useState('');
-  const [shiftEditMinutes, setShiftEditMinutes] = useState('');
-  const [savingShiftSummary, setSavingShiftSummary] = useState(false);
-  const [shiftEditError, setShiftEditError] = useState(null);
-  const [savingShiftFinance, setSavingShiftFinance] = useState(false);
-  const [shiftFinanceError, setShiftFinanceError] = useState(null);
-
-  const addFormRef = useRef(null);
 
   usePageHeading(PAGE_HEADING);
 
-  const loadActiveShift = useCallback(async (currentUser) => {
-    if (!currentUser) return null;
-    const { data, error } = await supabase
-      .from('waiter_shifts')
-      .select('*')
-      .eq('user_id', currentUser.id)
-      .eq('status', 'active')
-      .order('start_time', { ascending: false })
-      .limit(1);
-    if (error) throw error;
-    const shift = data?.[0] ?? null;
-    setActiveShift(shift);
-    return shift;
-  }, []);
-
-  const loadPastShifts = useCallback(async (currentUser) => {
-    if (!currentUser) {
-      setPastShifts([]);
+  const loadWaiteringEvents = useCallback(async (ownerId) => {
+    if (!ownerId) {
+      setEvents([]);
       return;
     }
-    const { data, error } = await supabase
-      .from('waiter_shifts')
-      .select('*')
-      .eq('user_id', currentUser.id)
-      .eq('status', 'completed')
-      .order('start_time', { ascending: false })
-      .limit(20);
-    if (error) throw error;
-    const shifts = data ?? [];
-    const ids = shifts.map((s) => s.id);
-    const tablesByShift = {};
-    if (ids.length) {
-      const { data: tableData, error: tablesError } = await supabase
-        .from('waiter_tables')
-        .select('shift_id, table_number, guests, bill_total, tip_amount')
-        .in('shift_id', ids);
-      if (tablesError) throw tablesError;
-      (tableData || []).forEach((row) => {
-        if (!tablesByShift[row.shift_id]) tablesByShift[row.shift_id] = [];
-        tablesByShift[row.shift_id].push(row);
-      });
-    }
-    setPastShifts(shifts.map((s) => ({ ...s, tables: tablesByShift[s.id] || [] })));
-  }, []);
 
-  const loadTablesForShift = useCallback(async (shiftId) => {
-    if (!shiftId || !user) {
-      setTables([]);
-      return;
-    }
+    setLoadError(null);
     const { data, error } = await supabase
-      .from('waiter_tables')
+      .from('note_events')
       .select('*')
-      .eq('user_id', user.id)
-      .eq('shift_id', shiftId)
-      .order('created_at', { ascending: false });
+      .eq('owner_id', ownerId)
+      .eq('valid', true)
+      .or(
+        `command.in.(${WAITING_COMMANDS.join(',')}),event_type.in.(${WAITING_EVENT_TYPES.join(',')})`
+      )
+      .order('occurred_at', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: false })
+      .limit(100);
+
     if (error) throw error;
-    setTables(data ?? []);
-  }, [user]);
+    setEvents(data || []);
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
+
     const bootstrap = async () => {
+      setLoading(true);
+      setLoadError(null);
       try {
-        const { data } = await supabase.auth.getUser();
+        const { data, error } = await supabase.auth.getUser();
+        if (error) throw error;
         if (cancelled) return;
+
         const resolvedUser = data?.user ?? null;
         setUser(resolvedUser);
-        if (!resolvedUser) {
-          setLoading(false);
-          return;
+
+        if (resolvedUser?.id) {
+          await loadWaiteringEvents(resolvedUser.id);
+        } else {
+          setEvents([]);
         }
-        await Promise.all([loadActiveShift(resolvedUser), loadPastShifts(resolvedUser)]);
       } catch (error) {
-        if (!cancelled) setLoadError(error?.message || 'Failed to load shifts');
+        if (!cancelled) setLoadError(error?.message || 'Could not load waitering events.');
       } finally {
         if (!cancelled) setLoading(false);
       }
     };
+
     bootstrap();
+
     return () => {
       cancelled = true;
     };
-  }, [loadActiveShift, loadPastShifts]);
+  }, [loadWaiteringEvents]);
 
-  useEffect(() => {
-    if (!activeShift) return undefined;
-    const id = setInterval(() => setNowTs(Date.now()), 1000);
-    return () => clearInterval(id);
-  }, [activeShift]);
+  const cashupEvents = useMemo(() => events.filter(isCashupEvent), [events]);
+  const tableEvents = useMemo(() => events.filter(isTableEvent), [events]);
+  const latestCashup = cashupEvents[0] || null;
 
-  useEffect(() => {
-    if (selectedShift?.id) {
-      loadTablesForShift(selectedShift.id);
-    } else {
-      setTables([]);
-    }
-  }, [loadTablesForShift, selectedShift?.id]);
+  const summary = useMemo(() => {
+    const todayCashups = cashupEvents.filter((event) => isToday(eventTime(event)));
 
-  useEffect(() => {
-    setIsEditingShiftSummary(false);
-    setShiftEditError(null);
-  }, [selectedShift?.id]);
-
-  useEffect(() => {
-    if (!selectedShift) {
-      setShiftFinanceForm(initialShiftFinanceForm);
-      setShiftFinanceError(null);
-      return;
-    }
-    const shiftTotalRow = getShiftTotalRow(tables);
-    setShiftFinanceForm(
-      shiftTotalRow
-        ? {
-            bill_total: shiftTotalRow.bill_total != null ? String(shiftTotalRow.bill_total) : '',
-            tip_amount: shiftTotalRow.tip_amount != null ? String(shiftTotalRow.tip_amount) : '',
-            notes: shiftTotalRow.notes || '',
-          }
-        : initialShiftFinanceForm
+    const allCashupTotals = cashupEvents.reduce(
+      (totals, event) => {
+        const amounts = event.amounts || {};
+        totals.turnover += amountValue(amounts.turnover);
+        totals.retained += amountValue(amounts.retained);
+        totals.cash += amountValue(amounts.cash);
+        totals.nonCashRetained += amountValue(
+          amounts.nonCashRetained != null
+            ? amounts.nonCashRetained
+            : amountValue(amounts.retained) - amountValue(amounts.cash)
+        );
+        return totals;
+      },
+      { turnover: 0, retained: 0, cash: 0, nonCashRetained: 0 }
     );
-    setShiftFinanceError(null);
-  }, [selectedShift, tables]);
 
-  useEffect(() => {
-    if (selectedShift) return;
-    if (activeShift) {
-      setSelectedShift(activeShift);
-    } else if (pastShifts.length) {
-      setSelectedShift(pastShifts[0]);
-    }
-  }, [activeShift, pastShifts, selectedShift]);
-
-  const activeSummary = useMemo(
-    () =>
-      activeShift
-        ? computeShiftSummary(
-            activeShift,
-            activeShift?.id === selectedShift?.id ? tables : [],
-            nowTs
-          )
-        : null,
-    [activeShift, selectedShift?.id, tables, nowTs]
-  );
-
-  const selectedSummary = useMemo(
-    () => (selectedShift ? computeShiftSummary(selectedShift, tables, nowTs) : null),
-    [selectedShift, tables, nowTs]
-  );
-
-  const selectedShiftTotalRow = useMemo(() => getShiftTotalRow(tables), [tables]);
-  const selectedShiftDetailRows = useMemo(() => getShiftDetailRows(tables), [tables]);
-  const financeTipPct = useMemo(
-    () => computeTipPercentage(shiftFinanceForm.bill_total, shiftFinanceForm.tip_amount),
-    [shiftFinanceForm.bill_total, shiftFinanceForm.tip_amount]
-  );
-
-  const canEditShiftSummary = Boolean(
-    selectedShift && (selectedShift.status === 'completed' || selectedShift.end_time)
-  );
-
-  async function handleGenerateReport() {
-    if (!selectedShift || !user) {
-      alert('Select a shift first');
-      return;
-    }
-
-    // Get the tables for the selected shift if not already loaded
-    let tablesForReport = tables;
-    if (selectedShift.id !== activeShift?.id && selectedShift.tables) {
-      // For past shifts, use the tables already loaded with the shift
-      tablesForReport = selectedShift.tables;
-    }
-
-    // Compute summary for this specific shift
-    const summary = computeShiftSummary(selectedShift, tablesForReport, nowTs);
-
-    // Prepare the report structure
-    const report = {
-      shift: {
-        id: selectedShift.id,
-        status: selectedShift.status,
-        branch: selectedShift.branch || DEFAULT_BRANCH,
-        start_time: selectedShift.start_time,
-        end_time: selectedShift.end_time,
-        created_at: selectedShift.created_at,
-        updated_at: selectedShift.updated_at,
+    const todayCashupTotals = todayCashups.reduce(
+      (totals, event) => {
+        const amounts = event.amounts || {};
+        totals.turnover += amountValue(amounts.turnover);
+        totals.retained += amountValue(amounts.retained);
+        totals.cash += amountValue(amounts.cash);
+        return totals;
       },
-      
-      summary: {
-        duration_hours: summary.durationHours,
-        duration_formatted: formatDurationHours(summary.durationHours),
-        tables_count: summary.tablesCount,
-        guests_total: summary.guestsTotal,
-        turnover_total: summary.turnoverTotal,
-        turnover_formatted: formatCurrency(summary.turnoverTotal),
-        tips_total: summary.tipsTotal,
-        tips_formatted: formatCurrency(summary.tipsTotal),
-        tip_percentage: summary.tipPct != null ? summary.tipPct.toFixed(1) + '%' : '--',
-        tips_per_hour: summary.tipsPerHour != null ? formatCurrency(summary.tipsPerHour) : '--',
+      { turnover: 0, retained: 0, cash: 0 }
+    );
+
+    const tableTotals = tableEvents.reduce(
+      (totals, event) => {
+        const amounts = event.amounts || {};
+        const billTotal = amountValue(amounts.billTotal);
+        const tip = amounts.tip != null ? Number(amounts.tip) : amountValue(amounts.amountTendered) - billTotal;
+        totals.billTotal += billTotal;
+        totals.tips += Number.isFinite(tip) ? tip : 0;
+        if (Number.isFinite(Number(amounts.tipPercentage))) {
+          totals.tipPercentages.push(Number(amounts.tipPercentage));
+        }
+        return totals;
       },
-      
-      tables: tablesForReport.map(table => ({
-        id: table.id,
-        table_number: table.table_number,
-        guests: table.guests,
-        bill_total: table.bill_total,
-        bill_total_formatted: formatCurrency(table.bill_total),
-        tip_amount: table.tip_amount,
-        tip_amount_formatted: formatCurrency(table.tip_amount),
-        tip_percentage: table.bill_total > 0 ? 
-          ((Number(table.tip_amount || 0) / Number(table.bill_total)) * 100).toFixed(1) + '%' : 
-          '0%',
-        payment_method: table.payment_method,
-        notes: table.notes,
-        created_at: table.created_at,
-        self_state: table.self_state,
-        table_vibe: table.table_vibe,
-        system_load: table.system_load,
-        issue_source: table.issue_source,
-        group_type: table.group_type,
-        screenshot_url: table.screenshot_url,
-      })),
-      
-      report_generated_at: new Date().toISOString(),
-      report_generated_by: user?.id || 'unknown',
+      { billTotal: 0, tips: 0, tipPercentages: [] }
+    );
+
+    const retainedPercentage =
+      allCashupTotals.turnover > 0 ? (allCashupTotals.retained / allCashupTotals.turnover) * 100 : null;
+    const averageTableTipPercentage = tableTotals.tipPercentages.length
+      ? tableTotals.tipPercentages.reduce((total, value) => total + value, 0) / tableTotals.tipPercentages.length
+      : null;
+
+    return {
+      todayCashupTotals,
+      allCashupTotals,
+      retainedPercentage,
+      tableTotals,
+      averageTableTipPercentage,
     };
-
-    // Create a downloadable JSON file
-    const jsonString = JSON.stringify(report, null, 2);
-    const blob = new Blob([jsonString], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    
-    // Create a filename based on shift date
-    const shiftDate = formatShiftDate(selectedShift.start_time).replace(/[,\s]/g, '_');
-    const filename = `waiter_shift_report_${shiftDate}.json`;
-    
-    // Trigger download
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }
-
-  async function handleStartShift() {
-    if (!user) {
-      alert('Sign in required');
-      return;
-    }
-    setStartingShift(true);
-    setLoadError(null);
-    try {
-      const { data, error } = await supabase
-        .from('waiter_shifts')
-        .insert({
-          user_id: user.id,
-          start_time: new Date().toISOString(),
-          status: 'active',
-          branch: DEFAULT_BRANCH,
-        })
-        .select('*')
-        .single();
-      if (error) throw error;
-      setActiveShift(data);
-      setSelectedShift(data);
-      setTables([]);
-      setJustCompletedSummary(null);
-    } catch (error) {
-      setLoadError(error?.message || 'Unable to start shift');
-    } finally {
-      setStartingShift(false);
-    }
-  }
-
-  async function handleEndShift() {
-    if (!user || !activeShift) return;
-    setEndingShift(true);
-    setLoadError(null);
-    const completedAt = new Date().toISOString();
-    let tablesForShift = tables;
-    if (selectedShift?.id !== activeShift.id) {
-      const { data: activeTablesData } = await supabase
-        .from('waiter_tables')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('shift_id', activeShift.id)
-        .order('created_at', { ascending: false });
-      tablesForShift = activeTablesData || [];
-    }
-    try {
-      const { data, error } = await supabase
-        .from('waiter_shifts')
-        .update({ end_time: completedAt, status: 'completed' })
-        .eq('id', activeShift.id)
-        .eq('user_id', user.id)
-        .select('*')
-        .single();
-      if (error) throw error;
-      const completedShift = data ?? { ...activeShift, end_time: completedAt, status: 'completed' };
-      setJustCompletedSummary({
-        shift: completedShift,
-        summary: computeShiftSummary(completedShift, tablesForShift, nowTs),
-      });
-      if (selectedShift?.id === activeShift.id || !selectedShift) {
-        setSelectedShift(completedShift);
-      }
-      setActiveShift(null);
-      setTables([]);
-      await loadPastShifts(user);
-    } catch (error) {
-      setLoadError(error?.message || 'Unable to end shift');
-    } finally {
-      setEndingShift(false);
-    }
-  }
-
-  function resetTableForm() {
-    setTableForm(initialTableForm);
-    setFileInputKey((k) => k + 1);
-  }
-
-  function beginEditTable(table) {
-    if (!table) return;
-    setEditingTable(table);
-    setRemoveScreenshot(false);
-    setTableForm({
-      table_number: table.table_number || '',
-      guests: table.guests != null ? String(table.guests) : '',
-      bill_total: table.bill_total != null ? String(table.bill_total) : '',
-      tip_amount: table.tip_amount != null ? String(table.tip_amount) : '',
-      payment_method: table.payment_method || 'card',
-      screenshotFile: null,
-      notes: table.notes || '',
-      self_state: table.self_state != null ? String(table.self_state) : '',
-      table_vibe: table.table_vibe || '',
-      system_load: table.system_load || '',
-      issue_source: table.issue_source || '',
-      group_type: table.group_type || '',
-    });
-    setFileInputKey((k) => k + 1);
-    addFormRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  }
-
-  function cancelEditTable() {
-    setEditingTable(null);
-    setRemoveScreenshot(false);
-    resetTableForm();
-  }
-
-  function beginEditShiftSummary() {
-    if (!selectedShift || !canEditShiftSummary) return;
-    const startDateValue = toDateInputValue(selectedShift.start_time);
-    const startMs = selectedShift.start_time ? new Date(selectedShift.start_time).getTime() : null;
-    const endMs = selectedShift.end_time ? new Date(selectedShift.end_time).getTime() : null;
-    const durationFromTimes =
-      startMs != null && endMs != null ? Math.max(0, Math.round((endMs - startMs) / 60000)) : null;
-    const fallbackMinutes = Math.max(0, Math.round((selectedSummary?.durationHours || 0) * 60));
-    const durationMinutes = durationFromTimes ?? fallbackMinutes;
-    const hours = Math.floor(durationMinutes / 60);
-    const minutes = durationMinutes % 60;
-
-    setShiftEditDate(startDateValue);
-    setShiftEditHours(String(hours));
-    setShiftEditMinutes(String(minutes));
-    setShiftEditError(null);
-    setIsEditingShiftSummary(true);
-  }
-
-  function cancelShiftSummaryEdit() {
-    setIsEditingShiftSummary(false);
-    setShiftEditError(null);
-  }
-
-  async function handleSaveShiftSummaryEdits() {
-    if (!selectedShift || !user) {
-      setShiftEditError('Select a completed shift first.');
-      return;
-    }
-    if (!canEditShiftSummary) {
-      setShiftEditError('Only completed shifts can be edited.');
-      return;
-    }
-    if (!shiftEditDate) {
-      setShiftEditError('Select a shift date.');
-      return;
-    }
-    const startDateObj = applyDateToStartTime(selectedShift.start_time, shiftEditDate);
-    if (!startDateObj) {
-      setShiftEditError('Invalid shift date.');
-      return;
-    }
-    const durationMinutes = parseDurationToMinutes(shiftEditHours, shiftEditMinutes);
-    if (durationMinutes == null) {
-      setShiftEditError('Enter a valid duration.');
-      return;
-    }
-    const newStartIso = startDateObj.toISOString();
-    const newEndIso = computeEndTimeIso(startDateObj, durationMinutes);
-    if (!newEndIso) {
-      setShiftEditError('Unable to compute shift end time.');
-      return;
-    }
-
-    setSavingShiftSummary(true);
-    setShiftEditError(null);
-    try {
-      const { data, error } = await supabase
-        .from('waiter_shifts')
-        .update({ start_time: newStartIso, end_time: newEndIso })
-        .eq('id', selectedShift.id)
-        .eq('user_id', user.id)
-        .select('*')
-        .single();
-      if (error) throw error;
-      if (!data) throw new Error('Shift update failed.');
-
-      setSelectedShift(data);
-      setPastShifts((prev) =>
-        prev.map((shift) => (shift.id === data.id ? { ...shift, ...data } : shift))
-      );
-      setJustCompletedSummary((prev) => {
-        if (!prev || prev.shift?.id !== data.id) return prev;
-        const tablesForSummary = selectedShift?.id === data.id ? tables : null;
-        if (tablesForSummary) {
-          return { ...prev, shift: data, summary: computeShiftSummary(data, tablesForSummary, nowTs) };
-        }
-        const durationSummary = computeShiftSummary(data, [], nowTs);
-        const tipsPerHour =
-          prev.summary?.tipsTotal && durationSummary.durationHours > 0
-            ? prev.summary.tipsTotal / durationSummary.durationHours
-            : prev.summary?.tipsPerHour ?? null;
-        return {
-          ...prev,
-          shift: data,
-          summary: {
-            ...prev.summary,
-            durationHours: durationSummary.durationHours,
-            tipsPerHour,
-          },
-        };
-      });
-
-      setIsEditingShiftSummary(false);
-    } catch (error) {
-      setShiftEditError(error?.message || 'Unable to save shift changes.');
-    } finally {
-      setSavingShiftSummary(false);
-    }
-  }
-
-  async function handleSaveShiftFinance(e) {
-    e.preventDefault();
-    if (!user || !selectedShift) {
-      setShiftFinanceError('Select a shift first.');
-      return;
-    }
-    if (!['active', 'completed'].includes(selectedShift.status)) {
-      setShiftFinanceError('You can only save records for active or completed shifts.');
-      return;
-    }
-
-    const billTotal = Number(shiftFinanceForm.bill_total || 0);
-    const tipAmount = Number(shiftFinanceForm.tip_amount || 0);
-    if (!Number.isFinite(billTotal) || billTotal < 0) {
-      setShiftFinanceError('Enter a valid bill total.');
-      return;
-    }
-    if (!Number.isFinite(tipAmount) || tipAmount < 0) {
-      setShiftFinanceError('Enter a valid tip amount.');
-      return;
-    }
-
-    setSavingShiftFinance(true);
-    setShiftFinanceError(null);
-    try {
-      const payload = {
-        user_id: user.id,
-        shift_id: selectedShift.id,
-        table_number: SHIFT_TOTAL_TABLE_NUMBER,
-        guests: 0,
-        bill_total: billTotal,
-        tip_amount: tipAmount,
-        payment_method: 'mixed',
-        screenshot_url: null,
-        notes: shiftFinanceForm.notes?.trim() || null,
-        self_state: null,
-        table_vibe: null,
-        system_load: null,
-        issue_source: null,
-        group_type: null,
-      };
-
-      if (selectedShiftTotalRow) {
-        const { error } = await supabase
-          .from('waiter_tables')
-          .update({
-            bill_total: payload.bill_total,
-            tip_amount: payload.tip_amount,
-            notes: payload.notes,
-          })
-          .eq('id', selectedShiftTotalRow.id)
-          .eq('user_id', user.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from('waiter_tables').insert(payload);
-        if (error) throw error;
-      }
-
-      await loadTablesForShift(selectedShift.id);
-      await loadPastShifts(user);
-    } catch (error) {
-      setShiftFinanceError(error?.message || 'Unable to save shift record.');
-    } finally {
-      setSavingShiftFinance(false);
-    }
-  }
-
-  async function handleAddTable(e) {
-    e.preventDefault();
-    if (!user || !selectedShift) {
-      alert('Select a shift first');
-      return;
-    }
-
-    if (!editingTable && !['active', 'completed'].includes(selectedShift.status)) {
-      alert('You can only add tables for active or completed shifts.');
-      return;
-    }
-    setAddingTable(true);
-    setLoadError(null);
-    let screenshotUrl = editingTable?.screenshot_url ?? null;
-    try {
-      const {
-        screenshotFile,
-        table_number,
-        guests,
-        bill_total,
-        tip_amount,
-        payment_method,
-        notes,
-        self_state,
-        table_vibe,
-        system_load,
-        issue_source,
-        group_type,
-      } = tableForm;
-
-      if (screenshotFile) {
-        const filePath = `${user.id}/${selectedShift.id}/${
-          typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(16).slice(2)
-        }`;
-        const { error: uploadError } = await supabase.storage.from('waiter-bills').upload(filePath, screenshotFile);
-        if (uploadError) throw uploadError;
-        const { data: publicUrlData } = supabase.storage.from('waiter-bills').getPublicUrl(filePath);
-        screenshotUrl = publicUrlData?.publicUrl ?? null;
-      }
-
-      if (removeScreenshot) {
-        screenshotUrl = null;
-      }
-
-      const parsedSelfState = Number(self_state);
-      const selfStateValue =
-        Number.isFinite(parsedSelfState) && parsedSelfState >= 1 && parsedSelfState <= 5 ? parsedSelfState : null;
-
-      const payload = {
-        user_id: user.id,
-        shift_id: selectedShift.id,
-        table_number,
-        guests: Number(guests || 0),
-        bill_total: Number(bill_total || 0),
-        tip_amount: Number(tip_amount || 0),
-        payment_method: payment_method || 'card',
-        screenshot_url: screenshotUrl,
-        notes: notes?.trim() || null,
-        self_state: selfStateValue,
-        table_vibe: table_vibe || null,
-        system_load: system_load || null,
-        issue_source: issue_source || null,
-        group_type: group_type || null,
-      };
-
-      if (editingTable) {
-        const { error } = await supabase
-          .from('waiter_tables')
-          .update({
-            table_number: payload.table_number,
-            guests: payload.guests,
-            bill_total: payload.bill_total,
-            tip_amount: payload.tip_amount,
-            payment_method: payload.payment_method,
-            screenshot_url: payload.screenshot_url,
-            notes: payload.notes,
-            self_state: payload.self_state,
-            table_vibe: payload.table_vibe,
-            system_load: payload.system_load,
-            issue_source: payload.issue_source,
-            group_type: payload.group_type,
-          })
-          .eq('id', editingTable.id)
-          .eq('user_id', user.id);
-        if (error) throw error;
-      } else {
-        const { error } = await supabase.from('waiter_tables').insert(payload);
-        if (error) throw error;
-      }
-      resetTableForm();
-      setEditingTable(null);
-      setRemoveScreenshot(false);
-      await loadTablesForShift(selectedShift.id);
-    } catch (error) {
-      setLoadError(error?.message || 'Unable to add table');
-    } finally {
-      setAddingTable(false);
-    }
-  }
-
-  async function handleDeleteTable(table) {
-    if (!user || !selectedShift) return;
-    const ok = window.confirm(`Delete table ${table.table_number}? This cannot be undone.`);
-    if (!ok) return;
-    setLoadError(null);
-    try {
-      const { error } = await supabase
-        .from('waiter_tables')
-        .delete()
-        .eq('id', table.id)
-        .eq('user_id', user.id);
-      if (error) throw error;
-      if (editingTable && editingTable.id === table.id) {
-        cancelEditTable();
-      }
-      await loadTablesForShift(selectedShift.id);
-    } catch (error) {
-      setLoadError(error?.message || 'Unable to delete table');
-    }
-  }
-
-  async function handleDeleteShift(shift) {
-    if (!user) return;
-    const ok = window.confirm('Delete this shift and all its tables? This cannot be undone.');
-    if (!ok) return;
-    setLoadError(null);
-    try {
-      await supabase.from('waiter_tables').delete().eq('user_id', user.id).eq('shift_id', shift.id);
-      await supabase.from('waiter_shifts').delete().eq('user_id', user.id).eq('id', shift.id);
-
-      if (activeShift?.id === shift.id) {
-        setActiveShift(null);
-        setTables([]);
-        setEditingTable(null);
-        setRemoveScreenshot(false);
-        resetTableForm();
-      }
-      if (selectedShift?.id === shift.id) {
-        setSelectedShift(null);
-        setTables([]);
-      }
-      await loadPastShifts(user);
-    } catch (error) {
-      setLoadError(error?.message || 'Unable to delete shift');
-    }
-  }
-
-  const renderActiveShift = () =>
-    activeShift && (
-      <Card
-        variant="info"
-        compact={false}
-        title={formatShiftDate(activeShift.start_time)}
-        subtitle={activeShift.branch || DEFAULT_BRANCH}
-        meta={activeSummary ? `On shift ${formatDurationHours(activeSummary.durationHours)}` : 'On shift'}
-        interactive
-        selected={selectedShift?.id === activeShift.id}
-        onClick={() => setSelectedShift(activeShift)}
-        footer={
-          <div className="flex items-center justify-between gap-3 text-sm text-text/70">
-            <div className="flex items-center gap-3">
-              <span>Started {formatShiftDate(activeShift.start_time)}</span>
-              <button
-                type="button"
-                className="text-xs font-semibold text-rose-700 underline-offset-2 hover:underline"
-                onClick={() => handleDeleteShift(activeShift)}
-              >
-                Delete shift
-              </button>
-            </div>
-            <button
-              className="rounded-full bg-rose-500 px-4 py-2 text-sm font-semibold text-white shadow hover:brightness-110"
-              onClick={handleEndShift}
-              disabled={endingShift}
-            >
-              {endingShift ? 'Clocking out...' : 'Clock out'}
-            </button>
-          </div>
-        }
-      >
-        {activeSummary ? (
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-            <SummaryTile label="Duration" value={formatDurationHours(activeSummary.durationHours)} />
-            <SummaryTile label="Turnover" value={formatCurrency(activeSummary.turnoverTotal)} />
-            <SummaryTile label="Tips" value={formatCurrency(activeSummary.tipsTotal)} />
-            <SummaryTile
-              label="Tip %"
-              value={activeSummary.tipPct != null ? `${activeSummary.tipPct.toFixed(1)}%` : '--'}
-            />
-          </div>
-        ) : (
-          <div className="text-sm text-text/70">Tracking shift...</div>
-        )}
-      </Card>
-    );
+  }, [cashupEvents, tableEvents]);
 
   return (
     <>
       <Head>
         <title>Waitering</title>
       </Head>
-      <div className="mx-auto max-w-6xl space-y-8">
-        <div className="space-y-2">
-          <h1 className="text-2xl font-semibold text-text">Waitering</h1>
-          <p className="text-sm text-text/70">Clock in, clock out, log turnover and retained cash.</p>
-        </div>
 
-        {loadError && (
+      <section className="mx-auto max-w-6xl space-y-6">
+        <Card
+          variant="neutral"
+          compact={false}
+          title="Notes-powered waitering"
+          subtitle="Capture waitering data in Notes using /cashup and /table commands."
+          accent="#34d399"
+          className="text-left"
+        >
+          <div className="flex flex-col gap-3 text-sm leading-relaxed text-text/75 sm:flex-row sm:items-center sm:justify-between">
+            <p>
+              This page now reads structured waitering events from <span className="font-semibold">note_events</span>.
+              Notes stay the source stream; this is only the lens.
+            </p>
+            <Link
+              href="/notes"
+              className="inline-flex shrink-0 items-center justify-center rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:brightness-110"
+            >
+              Capture in Notes
+            </Link>
+          </div>
+        </Card>
+
+        {loadError ? (
           <div className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
             {loadError}
           </div>
-        )}
+        ) : null}
 
-        {loading && <div className="text-sm text-text/60">Loading waitering data...</div>}
+        {loading ? <div className="text-sm text-text/60">Loading waitering events...</div> : null}
 
-        {!loading && !user && (
+        {!loading && !user ? (
           <div className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-text/80 shadow-sm">
-            Sign in to track shifts and tables.
+            Sign in to view waitering events.
           </div>
-        )}
+        ) : null}
 
-        {!loading && user && (
+        {!loading && user ? (
           <>
-            {activeShift ? (
-              renderActiveShift()
-            ) : (
-              <div className="flex flex-col items-start gap-3">
-                <button
-                  className="rounded-full bg-emerald-600 px-5 py-3 text-sm font-semibold text-white shadow hover:brightness-110 disabled:opacity-70"
-                  onClick={handleStartShift}
-                  disabled={startingShift}
-                >
-                  {startingShift ? 'Clocking in...' : 'Clock in'}
-                </button>
-                <p className="text-sm text-text/70">No active shift. Start one to begin tracking.</p>
-              </div>
-            )}
-
-            {justCompletedSummary ? (
+            {latestCashup ? (
               <Card
                 variant="success"
                 compact={false}
-                title="Shift summary"
-                subtitle={formatShiftDate(justCompletedSummary.shift?.start_time)}
+                title="Latest cashup"
+                subtitle={formatTimestamp(eventTime(latestCashup))}
+                className="text-left"
               >
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                  <SummaryTile label="Duration" value={formatDurationHours(justCompletedSummary.summary.durationHours)} />
-                  <SummaryTile
-                    label="Turnover"
-                    value={formatCurrency(justCompletedSummary.summary.turnoverTotal)}
-                  />
-                  <SummaryTile label="Tips" value={formatCurrency(justCompletedSummary.summary.tipsTotal)} />
-                  <SummaryTile
-                    label="Tip %"
-                    value={
-                      justCompletedSummary.summary.tipPct != null
-                        ? `${justCompletedSummary.summary.tipPct.toFixed(1)}%`
-                        : '--'
-                    }
-                  />
-                </div>
+                <p className="text-sm leading-relaxed text-text/80">{summarizeEvent(latestCashup)}</p>
               </Card>
             ) : null}
 
-            {selectedShift ? (
-              <div className="space-y-3">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <h3 className="text-lg font-semibold text-text">
-                      Shift record: {formatShiftDate(selectedShift.start_time)}
-                    </h3>
-                    <div className="text-sm text-text/70">
-                      Status: {selectedShift.status || 'unknown'}
-                      {selectedSummary ? ` - ${formatDurationHours(selectedSummary.durationHours)}` : ''}
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    {canEditShiftSummary ? (
-                      isEditingShiftSummary ? (
-                        <div className="flex flex-wrap items-end gap-2">
-                          <TextInput
-                            type="date"
-                            value={shiftEditDate}
-                            onChange={(e) => setShiftEditDate(e.target.value)}
-                            className="w-[150px]"
-                            aria-label="Shift date"
-                            disabled={savingShiftSummary}
-                          />
-                          <TextInput
-                            type="number"
-                            min="0"
-                            step="1"
-                            value={shiftEditHours}
-                            onChange={(e) => setShiftEditHours(e.target.value)}
-                            className="w-20"
-                            aria-label="Shift duration hours"
-                            disabled={savingShiftSummary}
-                          />
-                          <TextInput
-                            type="number"
-                            min="0"
-                            max="59"
-                            step="1"
-                            value={shiftEditMinutes}
-                            onChange={(e) => setShiftEditMinutes(e.target.value)}
-                            className="w-20"
-                            aria-label="Shift duration minutes"
-                            disabled={savingShiftSummary}
-                          />
-                          <button
-                            type="button"
-                            className="rounded-full bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow hover:brightness-110 disabled:opacity-70"
-                            onClick={handleSaveShiftSummaryEdits}
-                            disabled={savingShiftSummary}
-                          >
-                            {savingShiftSummary ? 'Saving...' : 'Save'}
-                          </button>
-                          <button
-                            type="button"
-                            className="rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-text shadow-sm hover:bg-slate-50"
-                            onClick={cancelShiftSummaryEdit}
-                            disabled={savingShiftSummary}
-                          >
-                            Cancel
-                          </button>
-                          <span className="text-xs text-text/60">Edits date + duration only.</span>
-                        </div>
-                      ) : (
-                        <button
-                          type="button"
-                          className="rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-text shadow-sm hover:bg-slate-50"
-                          onClick={beginEditShiftSummary}
-                        >
-                          Edit shift
-                        </button>
-                      )
-                    ) : null}
-                    {['active', 'completed'].includes(selectedShift.status) ? (
-                      <button
-                        className="rounded-full border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-text shadow-sm hover:bg-slate-50"
-                        onClick={handleGenerateReport}
-                      >
-                        Generate report
-                      </button>
-                    ) : null}
-                  </div>
-                </div>
-                {isEditingShiftSummary && shiftEditError ? (
-                  <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
-                    {shiftEditError}
-                  </div>
-                ) : null}
-
-                {selectedSummary ? (
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-                    <SummaryTile label="Duration" value={formatDurationHours(selectedSummary.durationHours)} />
-                    <SummaryTile label="Turnover" value={formatCurrency(selectedSummary.turnoverTotal)} />
-                    <SummaryTile label="Tips" value={formatCurrency(selectedSummary.tipsTotal)} />
-                    <SummaryTile
-                      label="Tip %"
-                      value={selectedSummary.tipPct != null ? `${selectedSummary.tipPct.toFixed(1)}%` : '--'}
-                    />
-                  </div>
-                ) : null}
-
-                <Card
-                  variant="neutral"
-                  compact={false}
-                  title="Daily shift record"
-                  subtitle="Save the shift-level totals. Table details can stay in notes for now."
-                >
-                  <form className="space-y-4" onSubmit={handleSaveShiftFinance}>
-                    <div className="grid gap-3 md:grid-cols-3">
-                      <TextInput
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        label="Bill total / turnover (R)"
-                        value={shiftFinanceForm.bill_total}
-                        onChange={(e) =>
-                          setShiftFinanceForm((prev) => ({ ...prev, bill_total: e.target.value }))
-                        }
-                        placeholder="4500.00"
-                        disabled={savingShiftFinance}
-                      />
-                      <TextInput
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        label="Tip amount / retained cash (R)"
-                        value={shiftFinanceForm.tip_amount}
-                        onChange={(e) =>
-                          setShiftFinanceForm((prev) => ({ ...prev, tip_amount: e.target.value }))
-                        }
-                        placeholder="450.00"
-                        disabled={savingShiftFinance}
-                      />
-                      <div className="rounded-lg border border-white/20 bg-white/50 px-3 py-2 shadow-sm">
-                        <div className="text-[11px] uppercase tracking-wide text-text/60">Calculated tip %</div>
-                        <div className="text-base font-semibold text-text">
-                          {financeTipPct != null ? `${financeTipPct.toFixed(1)}%` : '--'}
-                        </div>
-                      </div>
-                    </div>
-                    <TextAreaAuto
-                      label="Notes"
-                      placeholder="Optional context: busy section, cash retained, weird payments, anything worth remembering."
-                      value={shiftFinanceForm.notes}
-                      onChange={(e) => setShiftFinanceForm((prev) => ({ ...prev, notes: e.target.value }))}
-                      maxRows={4}
-                      disabled={savingShiftFinance}
-                    />
-                    {shiftFinanceError ? (
-                      <div className="rounded-md border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
-                        {shiftFinanceError}
-                      </div>
-                    ) : null}
-                    <button
-                      type="submit"
-                      className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:brightness-110 disabled:opacity-70"
-                      disabled={savingShiftFinance}
-                    >
-                      {savingShiftFinance ? 'Saving...' : 'Save shift record'}
-                    </button>
-                  </form>
-                </Card>
-
-                {selectedShift ? (
-                  <details className="rounded-xl border border-slate-200 bg-white/70 p-4 shadow-sm">
-                    <summary className="cursor-pointer text-sm font-semibold text-text">
-                      Advanced table entries
-                      {selectedShiftDetailRows.length ? ` (${selectedShiftDetailRows.length})` : ''}
-                    </summary>
-                    <p className="mt-2 text-xs text-text/70">
-                      Legacy per-table logging is still available, but daily tracking now uses the shift record above.
-                    </p>
-                    <div ref={addFormRef} className="mt-4">
-                    <Card
-                      variant="neutral"
-                      compact={false}
-                      title={editingTable ? `Edit table ${editingTable.table_number}` : 'Add table'}
-                      subtitle={editingTable ? 'Update this table entry' : 'Log a bill for this shift'}
-                    >
-                      <form className="space-y-4" onSubmit={handleAddTable}>
-                        <div className="grid gap-3 md:grid-cols-2">
-                          <TextInput
-                            required
-                            label="Table number"
-                            value={tableForm.table_number}
-                            onChange={(e) => setTableForm((prev) => ({ ...prev, table_number: e.target.value }))}
-                            placeholder="e.g. 12"
-                          />
-                          <TextInput
-                            required
-                            type="number"
-                            min="0"
-                            label="Guests"
-                            value={tableForm.guests}
-                            onChange={(e) => setTableForm((prev) => ({ ...prev, guests: e.target.value }))}
-                            placeholder="2"
-                          />
-                          <TextInput
-                            required
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            label="Bill total (R)"
-                            value={tableForm.bill_total}
-                            onChange={(e) => setTableForm((prev) => ({ ...prev, bill_total: e.target.value }))}
-                            placeholder="450.00"
-                          />
-                          <TextInput
-                            required
-                            type="number"
-                            step="0.01"
-                            min="0"
-                            label="Tip amount (R)"
-                            value={tableForm.tip_amount}
-                            onChange={(e) => setTableForm((prev) => ({ ...prev, tip_amount: e.target.value }))}
-                            placeholder="45.00"
-                          />
-                          <label className="block space-y-1">
-                            <span className="block text-sm font-medium text-text">Payment method</span>
-                            <select
-                              className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-text focus:outline-none focus:ring-2 focus:ring-primary/40"
-                              value={tableForm.payment_method}
-                              onChange={(e) => setTableForm((prev) => ({ ...prev, payment_method: e.target.value }))}
-                            >
-                              <option value="card">Card</option>
-                              <option value="cash">Cash</option>
-                              <option value="mixed">Mixed</option>
-                            </select>
-                          </label>
-                          <label className="block space-y-1">
-                            <span className="block text-sm font-medium text-text">
-                              {editingTable ? 'New bill screenshot (optional, replaces existing)' : 'Bill screenshot (optional)'}
-                            </span>
-                            <input
-                              key={fileInputKey}
-                              type="file"
-                              accept="image/*"
-                              onChange={(e) => {
-                                const file = e.target.files?.[0] || null;
-                                setTableForm((prev) => ({ ...prev, screenshotFile: file }));
-                              }}
-                              className="w-full text-sm text-text"
-                            />
-                            <span className="block text-xs text-text/70">Uploads to the public waiter-bills bucket.</span>
-                          </label>
-                        </div>
-                        {editingTable && editingTable.screenshot_url ? (
-                          <div className="space-y-2">
-                            <div className="text-xs font-medium text-text/70">Current screenshot</div>
-                            <div className="overflow-hidden rounded-lg border border-white/30 bg-white/30 shadow-inner">
-                              <img
-                                src={editingTable.screenshot_url}
-                                alt="Existing bill screenshot"
-                                className="h-32 w-full object-cover"
-                              />
-                            </div>
-                            <label className="flex items-center gap-2 text-xs text-text/80">
-                              <input
-                                type="checkbox"
-                                checked={removeScreenshot}
-                                onChange={(e) => setRemoveScreenshot(e.target.checked)}
-                              />
-                              <span>Remove existing screenshot</span>
-                            </label>
-                          </div>
-                        ) : null}
-                        <div className="space-y-3 rounded-lg border border-slate-200 bg-white/70 p-3">
-                          <div className="flex items-center justify-between gap-3">
-                            <div>
-                              <div className="text-sm font-semibold text-text">Experience tags</div>
-                              <div className="text-xs text-text/70">Optional context for the interaction.</div>
-                            </div>
-                            <button
-                              type="button"
-                              className="text-xs font-semibold text-text/70 underline-offset-2 hover:underline"
-                              onClick={() =>
-                                setTableForm((prev) => ({
-                                  ...prev,
-                                  self_state: '',
-                                  table_vibe: '',
-                                  system_load: '',
-                                  issue_source: '',
-                                  group_type: '',
-                                }))
-                              }
-                            >
-                              Clear tags
-                            </button>
-                          </div>
-                          <div className="grid gap-3 md:grid-cols-2">
-                            <div className="md:col-span-2 space-y-2">
-                              <div className="flex items-center justify-between gap-3">
-                                <span className="text-sm font-medium text-text">Your state (1 = dead, 5 = laser)</span>
-                                <button
-                                  type="button"
-                                  className="text-xs font-semibold text-text/70 underline-offset-2 hover:underline"
-                                  onClick={() => setTableForm((prev) => ({ ...prev, self_state: '' }))}
-                                >
-                                  Clear
-                                </button>
-                              </div>
-                              <div className="flex flex-wrap gap-2">
-                                {[1, 2, 3, 4, 5].map((value) => (
-                                  <label
-                                    key={value}
-                                    className={`flex cursor-pointer items-center gap-2 rounded-full border px-3 py-1 text-sm font-semibold shadow-sm ${
-                                      tableForm.self_state === String(value)
-                                        ? 'border-emerald-300 bg-emerald-50 text-emerald-700'
-                                        : 'border-slate-200 bg-white text-text'
-                                    }`}
-                                  >
-                                    <input
-                                      type="radio"
-                                      name="self_state"
-                                      value={value}
-                                      checked={tableForm.self_state === String(value)}
-                                      onChange={(e) => setTableForm((prev) => ({ ...prev, self_state: e.target.value }))}
-                                      className="hidden"
-                                    />
-                                    {value}
-                                  </label>
-                                ))}
-                              </div>
-                            </div>
-                            <label className="block space-y-1">
-                              <span className="block text-sm font-medium text-text">Guest vibe</span>
-                              <select
-                                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-text focus:outline-none focus:ring-2 focus:ring-primary/40"
-                                value={tableForm.table_vibe}
-                                onChange={(e) => setTableForm((prev) => ({ ...prev, table_vibe: e.target.value }))}
-                              >
-                                <option value="">No selection</option>
-                                <option value="chill">chill</option>
-                                <option value="neutral">neutral</option>
-                                <option value="needy">needy</option>
-                                <option value="complaining">complaining</option>
-                                <option value="angry">angry</option>
-                              </select>
-                            </label>
-                            <label className="block space-y-1">
-                              <span className="block text-sm font-medium text-text">System load</span>
-                              <select
-                                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-text focus:outline-none focus:ring-2 focus:ring-primary/40"
-                                value={tableForm.system_load}
-                                onChange={(e) => setTableForm((prev) => ({ ...prev, system_load: e.target.value }))}
-                              >
-                                <option value="">No selection</option>
-                                <option value="low">low</option>
-                                <option value="medium">medium</option>
-                                <option value="high">high</option>
-                              </select>
-                            </label>
-                            <label className="block space-y-1">
-                              <span className="block text-sm font-medium text-text">Main issue source</span>
-                              <select
-                                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-text focus:outline-none focus:ring-2 focus:ring-primary/40"
-                                value={tableForm.issue_source}
-                                onChange={(e) => setTableForm((prev) => ({ ...prev, issue_source: e.target.value }))}
-                              >
-                                <option value="">No selection</option>
-                                <option value="none">none</option>
-                                <option value="self">self</option>
-                                <option value="kitchen">kitchen</option>
-                                <option value="bar">bar</option>
-                                <option value="mixed">mixed</option>
-                              </select>
-                            </label>
-                            <label className="block space-y-1">
-                              <span className="block text-sm font-medium text-text">Group type</span>
-                              <select
-                                className="w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-text focus:outline-none focus:ring-2 focus:ring-primary/40"
-                                value={tableForm.group_type}
-                                onChange={(e) => setTableForm((prev) => ({ ...prev, group_type: e.target.value }))}
-                              >
-                                <option value="">No selection</option>
-                                <option value="solo">solo</option>
-                                <option value="couple">couple</option>
-                                <option value="family">family</option>
-                                <option value="friends">friends</option>
-                                <option value="work">work</option>
-                                <option value="other">other</option>
-                              </select>
-                            </label>
-                          </div>
-                        </div>
-                        <TextAreaAuto
-                          label="Notes"
-                          placeholder="Special requests, comps, etc."
-                          value={tableForm.notes}
-                          onChange={(e) => setTableForm((prev) => ({ ...prev, notes: e.target.value }))}
-                          maxRows={4}
-                        />
-
-                        <div className="flex items-center gap-3">
-                          <button
-                            type="submit"
-                            className="rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:brightness-110 disabled:opacity-70"
-                            disabled={addingTable}
-                          >
-                            {addingTable
-                              ? editingTable
-                                ? 'Saving changes...'
-                                : 'Saving...'
-                              : editingTable
-                              ? 'Save changes'
-                              : 'Save table'}
-                          </button>
-                          <button
-                            type="button"
-                            className="text-sm font-medium text-text/70 underline-offset-2 hover:underline"
-                            onClick={resetTableForm}
-                          >
-                            Clear
-                          </button>
-                          {editingTable && (
-                            <button
-                              type="button"
-                              className="text-sm font-medium text-text/70 underline-offset-2 hover:underline"
-                              onClick={cancelEditTable}
-                            >
-                              Cancel edit
-                            </button>
-                          )}
-                        </div>
-                      </form>
-                    </Card>
-                  </div>
-
-                    <div className="mt-4 grid gap-3 md:grid-cols-2">
-                      {selectedShiftDetailRows.map((table) => (
-                        <WaiterTableCard
-                          key={table.id}
-                          table={table}
-                          onEdit={beginEditTable}
-                          onDelete={handleDeleteTable}
-                        />
-                      ))}
-                    </div>
-                    {!selectedShiftDetailRows.length && (
-                      <div className="mt-3 text-sm text-text/70">No table-level entries logged.</div>
-                    )}
-                  </details>
-                ) : null}
-              </div>
-            ) : null}
-
-            <div className="space-y-3">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-text">Past shifts</h3>
-              </div>
-              <div className="grid gap-3 md:grid-cols-2">
-                {pastShifts.map((shift) => {
-                  const summary = computeShiftSummary(shift, shift.tables || []);
-                  return (
-                    <Card
-                      key={shift.id}
-                      variant="neutral"
-                      compact={false}
-                      title={formatShiftDate(shift.start_time)}
-                      subtitle={shift.branch || DEFAULT_BRANCH}
-                      meta={formatDurationHours(summary.durationHours)}
-                      interactive
-                      selected={selectedShift?.id === shift.id}
-                      onClick={() => setSelectedShift(shift)}
-                    >
-                      <div className="grid grid-cols-2 gap-2 text-sm">
-                        <SummaryTile label="Turnover" value={formatCurrency(summary.turnoverTotal)} />
-                        <SummaryTile label="Tips" value={formatCurrency(summary.tipsTotal)} />
-                        <SummaryTile
-                          label="Tip %"
-                          value={summary.tipPct != null ? `${summary.tipPct.toFixed(1)}%` : '--'}
-                        />
-                        <SummaryTile label="Duration" value={formatDurationHours(summary.durationHours)} />
-                      </div>
-                      <div className="mt-3 flex justify-end">
-                        <button
-                          type="button"
-                          className="text-xs font-semibold text-rose-700 underline-offset-2 hover:underline"
-                          onClick={() => handleDeleteShift(shift)}
-                        >
-                          Delete shift
-                        </button>
-                      </div>
-                    </Card>
-                  );
-                })}
-              </div>
-              {!pastShifts.length && <div className="text-sm text-text/70">No completed shifts yet.</div>}
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+              <SummaryTile
+                label="Today turnover"
+                value={formatCurrency(summary.todayCashupTotals.turnover)}
+                hint="From today's /cashup events"
+              />
+              <SummaryTile
+                label="Today retained"
+                value={formatCurrency(summary.todayCashupTotals.retained)}
+                hint={`${formatCurrency(summary.todayCashupTotals.cash)} cash`}
+              />
+              <SummaryTile label="Total turnover" value={formatCurrency(summary.allCashupTotals.turnover)} />
+              <SummaryTile label="Total retained" value={formatCurrency(summary.allCashupTotals.retained)} />
+              <SummaryTile label="Total cash" value={formatCurrency(summary.allCashupTotals.cash)} />
+              <SummaryTile
+                label="Non-cash retained"
+                value={formatCurrency(summary.allCashupTotals.nonCashRetained)}
+              />
+              <SummaryTile label="Retained %" value={formatPercent(summary.retainedPercentage)} />
+              <SummaryTile label="Tables recorded" value={tableEvents.length} />
+              <SummaryTile label="Table bill total" value={formatCurrency(summary.tableTotals.billTotal)} />
+              <SummaryTile label="Table tips" value={formatCurrency(summary.tableTotals.tips)} />
+              <SummaryTile label="Avg table tip %" value={formatPercent(summary.averageTableTipPercentage)} />
             </div>
+
+            <Card
+              variant="neutral"
+              compact={false}
+              title="Recent waitering events"
+              subtitle="/cashup and /table events from Notes"
+              accent="#60a5fa"
+              className="text-left"
+            >
+              {events.length ? (
+                <div className="space-y-3">
+                  {events.map((event) => (
+                    <article
+                      key={event.id}
+                      className="rounded-lg border border-slate-200 bg-white/70 px-3 py-3 shadow-sm"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="text-sm font-semibold text-text">
+                          /{event.command || 'event'}{' '}
+                          <span className="text-xs font-medium text-text/55">{event.event_type}</span>
+                        </div>
+                        <time className="text-xs text-text/55" dateTime={eventTime(event)}>
+                          {formatTimestamp(eventTime(event))}
+                        </time>
+                      </div>
+                      <p className="mt-2 text-sm leading-relaxed text-text/75">{summarizeEvent(event)}</p>
+                      {event.raw ? <p className="mt-2 text-xs text-text/50">{event.raw}</p> : null}
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <EmptyState />
+              )}
+            </Card>
           </>
-        )}
-      </div>
+        ) : null}
+      </section>
     </>
   );
 }
-
-// Manual test checklist:
-// - Select a completed shift -> Edit -> change date -> save -> past shifts list shows new date
-// - Change duration -> save -> selected summary duration + tips/hr update
-// - Cancel leaves values unchanged
-// - Active shift does not show Edit shift button

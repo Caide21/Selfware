@@ -6,6 +6,7 @@ import ExpandableCardBody from '@/components/CardKit/ExpandableCardBody';
 import { TextAreaAuto } from '@/components/Form';
 import PrimaryButton from '@/components/ui/PrimaryButton';
 import { createNoteInteractionTarget } from '@/lib/interactions/noteTargets';
+import { parseNoteCommand } from '@/lib/parseNoteCommand';
 import { supabase } from '@/lib/supabaseClient';
 
 const PAGE_HEADING = {
@@ -54,6 +55,73 @@ function NoteFragment({ note, actionContext }) {
   );
 }
 
+function formatCurrency(amount) {
+  const num = Number(amount || 0);
+  if (!Number.isFinite(num)) return 'R 0.00';
+  return `R ${num.toFixed(2)}`;
+}
+
+function ParsedCommandPreview({ parsed }) {
+  if (!parsed) return null;
+
+  const detailItems = Object.entries(parsed.amounts || {}).map(([key, value]) => {
+    const label = key.replace(/([A-Z])/g, ' $1').replace(/^./, (char) => char.toUpperCase());
+    const displayValue = key.toLowerCase().includes('percentage')
+      ? `${Number(value).toFixed(2)}%`
+      : formatCurrency(value);
+    return [label, displayValue];
+  });
+  if (parsed.payload?.tableNumber) detailItems.unshift(['Table', parsed.payload.tableNumber]);
+  if (parsed.description) detailItems.push(['Label', parsed.description]);
+
+  return (
+    <div
+      className={[
+        'rounded-lg border px-3 py-2 text-sm shadow-sm',
+        parsed.valid
+          ? 'border-emerald-300/60 bg-emerald-50/95 text-emerald-950'
+          : 'border-amber-300/70 bg-amber-50/95 text-amber-950',
+      ].join(' ')}
+    >
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="font-semibold text-current">
+          Parsed command: /{parsed.command || 'unknown'}
+        </div>
+        <div
+          className={[
+            'rounded-full border px-2 py-0.5 text-xs font-semibold uppercase tracking-wide',
+            parsed.valid
+              ? 'border-emerald-300 bg-white/80 text-emerald-800'
+              : 'border-amber-300 bg-white/80 text-amber-800',
+          ].join(' ')}
+        >
+          {parsed.valid ? parsed.event_type : 'Needs detail'}
+        </div>
+      </div>
+      {parsed.valid ? (
+        <>
+          <div className="mt-1 text-sm leading-relaxed text-current/85">{parsed.summary}</div>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {detailItems.map(([label, value]) => (
+              <span
+                key={label}
+                className={[
+                  'rounded-full border bg-white/85 px-2 py-1 text-xs font-medium',
+                  parsed.valid ? 'border-emerald-200 text-emerald-900' : 'border-amber-200 text-amber-900',
+                ].join(' ')}
+              >
+                {label}: {value}
+              </span>
+            ))}
+          </div>
+        </>
+      ) : (
+        <div className="mt-1 text-sm leading-relaxed text-current/85">{parsed.error}</div>
+      )}
+    </div>
+  );
+}
+
 export default function NotesPage() {
   const [user, setUser] = useState(null);
   const [notes, setNotes] = useState([]);
@@ -62,6 +130,7 @@ export default function NotesPage() {
   const [notesLoading, setNotesLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const [warning, setWarning] = useState(null);
 
   usePageHeading(PAGE_HEADING);
 
@@ -140,8 +209,10 @@ export default function NotesPage() {
 
     setSaving(true);
     setError(null);
+    setWarning(null);
 
     try {
+      const parsed = parseNoteCommand(trimmed);
       const { data, error: insertError } = await supabase
         .from('notes')
         .insert({
@@ -155,6 +226,27 @@ export default function NotesPage() {
 
       if (insertError) throw insertError;
 
+      if (parsed?.valid) {
+        const { error: eventInsertError } = await supabase.from('note_events').insert({
+          note_id: data.id,
+          owner_id: user.id,
+          command: parsed.command,
+          event_type: parsed.event_type,
+          raw: parsed.raw,
+          label: parsed.label || null,
+          description: parsed.description || null,
+          amounts: parsed.amounts || {},
+          payload: parsed.payload || {},
+          valid: parsed.valid,
+          parse_version: parsed.parse_version || 1,
+        });
+
+        if (eventInsertError) {
+          console.error('Failed to create note event', eventInsertError);
+          setWarning('Note saved, but the command event could not be structured yet.');
+        }
+      }
+
       setNotes((current) => [data, ...current]);
       setContent('');
     } catch (insertError) {
@@ -167,6 +259,7 @@ export default function NotesPage() {
 
   const showSignInRequired = !authLoading && !user;
   const showEmpty = !authLoading && !notesLoading && user && notes.length === 0;
+  const parsedCommand = parseNoteCommand(content);
   const actionContext = {
     supabase,
     onDeleteNote: (noteId) => {
@@ -191,6 +284,8 @@ export default function NotesPage() {
             className="border-white/10 bg-white/5 text-text placeholder:text-text/35 focus:border-cta-accent focus:ring-cta-accent/25"
           />
 
+          <ParsedCommandPreview parsed={parsedCommand} />
+
           <div className="flex flex-wrap items-center gap-3">
             <PrimaryButton
               type="submit"
@@ -208,6 +303,12 @@ export default function NotesPage() {
         {error ? (
           <div className="rounded-md border border-red-400/25 bg-red-500/10 px-3 py-2 text-sm text-red-100">
             {error}
+          </div>
+        ) : null}
+
+        {warning ? (
+          <div className="rounded-md border border-amber-300/25 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
+            {warning}
           </div>
         ) : null}
 
