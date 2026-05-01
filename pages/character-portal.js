@@ -39,8 +39,14 @@ const PORTAL_LINKS = [
   {
     href: '/finance',
     title: 'Finance OS',
-    copy: 'A lightweight money movement surface for cashups, retained cash, income, and expenses.',
+    copy: 'Verified ledger entries for income, expenses, loans, and repayments.',
     accent: '#34d399',
+  },
+  {
+    href: '/bossa-income',
+    title: 'Bossa Income',
+    copy: 'Raw Bossa salary, tips, table tips, and cashups before verification.',
+    accent: '#f59e0b',
   },
 ];
 

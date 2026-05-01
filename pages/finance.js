@@ -8,7 +8,7 @@ import { supabase } from '@/lib/supabaseClient';
 const PAGE_HEADING = {
   emoji: '',
   title: 'Finance OS',
-  subtitle: 'Structured money movement from Notes commands.',
+  subtitle: 'Verified ledger entries from Notes commands.',
 };
 
 const MOVE_OUT_TARGET = 55000;
@@ -97,17 +97,44 @@ function TargetCard({ label, value, target, hint, tone }) {
 function EmptyState() {
   return (
     <div className="rounded-lg border border-slate-200 bg-white/60 px-4 py-5 text-sm leading-relaxed text-text/70">
-      No finance transactions found yet. Capture money movement in Notes with{' '}
+      No finance ledger entries found yet. Capture verified money movement in Notes with{' '}
       <span className="font-semibold text-text">/income</span>,{' '}
       <span className="font-semibold text-text">/expense</span>, or{' '}
-      <span className="font-semibold text-text">/savings</span>.
+      <span className="font-semibold text-text">/loan</span>.
     </div>
   );
+}
+
+const LEDGER_EVENT_COMMANDS = ['loan', 'repay'];
+const LEDGER_EVENT_TYPES = ['finance.loan', 'finance.repay'];
+
+function eventTime(event) {
+  return event?.occurred_at || event?.created_at || '';
+}
+
+function eventAmount(event) {
+  return amountValue(event?.amounts?.amount);
+}
+
+function isLoanEvent(event) {
+  return event?.command === 'loan' || event?.event_type === 'finance.loan';
+}
+
+function isRepayEvent(event) {
+  return event?.command === 'repay' || event?.event_type === 'finance.repay';
+}
+
+function eventPerson(event) {
+  return String(event?.payload?.person || '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLowerCase();
 }
 
 export default function FinancePage() {
   const [user, setUser] = useState(null);
   const [transactions, setTransactions] = useState([]);
+  const [ledgerEvents, setLedgerEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
 
@@ -116,6 +143,7 @@ export default function FinancePage() {
   const loadFinanceTransactions = useCallback(async (ownerId) => {
     if (!ownerId) {
       setTransactions([]);
+      setLedgerEvents([]);
       return;
     }
 
@@ -129,7 +157,22 @@ export default function FinancePage() {
       .limit(200);
 
     if (error) throw error;
+
+    const { data: eventData, error: eventError } = await supabase
+      .from('note_events')
+      .select('*')
+      .eq('owner_id', ownerId)
+      .eq('valid', true)
+      .or(
+        `command.in.(${LEDGER_EVENT_COMMANDS.join(',')}),event_type.in.(${LEDGER_EVENT_TYPES.join(',')})`
+      )
+      .order('occurred_at', { ascending: false, nullsFirst: false })
+      .order('created_at', { ascending: false })
+      .limit(200);
+
+    if (eventError) throw eventError;
     setTransactions(data || []);
+    setLedgerEvents(eventData || []);
   }, []);
 
   useEffect(() => {
@@ -151,6 +194,7 @@ export default function FinancePage() {
           await loadFinanceTransactions(resolvedUser.id);
         } else {
           setTransactions([]);
+          setLedgerEvents([]);
         }
       } catch (error) {
         if (!cancelled) setLoadError(error?.message || 'Could not load finance transactions.');
@@ -195,20 +239,84 @@ export default function FinancePage() {
         monthIncome: 0,
         monthExpenses: 0,
         monthSavings: 0,
+        borrowedLoanTotal: 0,
+        lentLoanTotal: 0,
+        repaymentsTowardBorrowedLoans: 0,
+        repaymentsTowardLentLoans: 0,
+        overpaidBorrowedDebt: 0,
+        repayments: 0,
         incomeByMonth: {},
       }
     );
 
+    const loanBalances = new Map();
+
+    ledgerEvents.forEach((event) => {
+      const amount = eventAmount(event);
+      const personKey = eventPerson(event);
+      if (!personKey) return;
+
+      const direction = String(event?.payload?.direction || '').toLowerCase();
+      const personLabel = event?.payload?.person || 'Unknown';
+      const balance = loanBalances.get(personKey) || {
+        person: personLabel,
+        borrowed: 0,
+        lent: 0,
+        repaid: 0,
+      };
+
+      if (isLoanEvent(event)) {
+        if (direction === 'borrowed') balance.borrowed += amount;
+        if (direction === 'lent') balance.lent += amount;
+      }
+
+      if (isRepayEvent(event)) {
+        totals.repayments += amount;
+        balance.repaid += amount;
+      }
+
+      loanBalances.set(personKey, balance);
+    });
+
+    const loanPeople = Array.from(loanBalances.values()).map((balance) => ({
+      ...balance,
+      outstandingBorrowed: Math.max(0, balance.borrowed - balance.repaid),
+      overpaid: balance.borrowed > 0 ? Math.max(0, balance.repaid - balance.borrowed) : 0,
+      outstandingLent: Math.max(0, balance.lent - balance.repaid),
+    }));
+    const matchedLoanPeople = loanPeople.filter((balance) => balance.borrowed > 0 || balance.lent > 0);
+    const unmatchedRepayments = loanPeople.filter(
+      (balance) => balance.repaid > 0 && balance.borrowed === 0 && balance.lent === 0
+    );
+
+    matchedLoanPeople.forEach((balance) => {
+      const borrowedRepaymentPaid = Math.min(balance.repaid, balance.borrowed);
+      totals.borrowedLoanTotal += balance.borrowed;
+      totals.lentLoanTotal += balance.lent;
+      totals.repaymentsTowardBorrowedLoans += borrowedRepaymentPaid;
+      totals.repaymentsTowardLentLoans += Math.min(balance.repaid, balance.lent);
+      totals.overpaidBorrowedDebt += balance.overpaid;
+    });
+
     const incomeMonths = Object.keys(totals.incomeByMonth);
     const averageIncome = incomeMonths.length ? totals.income / incomeMonths.length : 0;
+    const outstandingBorrowedDebt = Math.max(0, totals.borrowedLoanTotal - totals.repaymentsTowardBorrowedLoans);
+    const moneyOwedToMe = Math.max(0, totals.lentLoanTotal - totals.repaymentsTowardLentLoans);
 
     return {
       ...totals,
-      net: totals.income - totals.expenses - totals.savings,
+      verifiedIncome: totals.income,
+      outstandingBorrowedDebt,
+      borrowedDebtRepaymentsPaid: totals.repaymentsTowardBorrowedLoans,
+      spendableAfterDebt: totals.income - totals.expenses - totals.repaymentsTowardBorrowedLoans - outstandingBorrowedDebt,
+      moneyOwedToMe,
+      loanPeople: matchedLoanPeople,
+      unmatchedRepayments,
+      net: totals.income - totals.expenses - totals.savings - totals.repaymentsTowardBorrowedLoans - outstandingBorrowedDebt,
       averageIncome,
       incomeMonths: incomeMonths.length,
     };
-  }, [transactions]);
+  }, [ledgerEvents, transactions]);
 
   return (
     <>
@@ -221,7 +329,7 @@ export default function FinancePage() {
           variant="neutral"
           compact={false}
           title="Financial OS"
-          subtitle="Notes capture the raw signal; structured transactions power the dashboard."
+          subtitle="Verified income and expense entries power totals; raw Bossa evidence stays in Bossa Income."
           accent="#34d399"
           className="text-left"
         >
@@ -229,14 +337,22 @@ export default function FinancePage() {
             <p>
               Capture with <span className="font-semibold">/income</span>,{' '}
               <span className="font-semibold">/expense</span>, or{' '}
-              <span className="font-semibold">/savings</span>. Finance rows are created from those notes.
+              <span className="font-semibold">/loan</span>. Bossa raw logs are evidence only until verified.
             </p>
-            <Link
-              href="/notes"
-              className="inline-flex shrink-0 items-center justify-center rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:brightness-110"
-            >
-              Capture in Notes
-            </Link>
+            <div className="flex flex-wrap gap-2">
+              <Link
+                href="/bossa-income"
+                className="inline-flex shrink-0 items-center justify-center rounded-full border border-emerald-200 bg-white/65 px-4 py-2 text-sm font-semibold text-emerald-800 shadow hover:bg-white"
+              >
+                Review Bossa Income
+              </Link>
+              <Link
+                href="/notes"
+                className="inline-flex shrink-0 items-center justify-center rounded-full bg-emerald-600 px-4 py-2 text-sm font-semibold text-white shadow hover:brightness-110"
+              >
+                Capture in Notes
+              </Link>
+            </div>
           </div>
         </Card>
 
@@ -257,13 +373,39 @@ export default function FinancePage() {
         {!loading && user ? (
           <>
             <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-              <SummaryTile label="Total income" value={formatCurrency(summary.income)} accent="text-emerald-700" />
+              <SummaryTile label="Verified income" value={formatCurrency(summary.verifiedIncome)} accent="text-emerald-700" />
+              <SummaryTile label="Borrowed loans total" value={formatCurrency(summary.borrowedLoanTotal)} accent="text-amber-700" />
+              <SummaryTile
+                label="Debt repayments paid"
+                value={formatCurrency(summary.borrowedDebtRepaymentsPaid)}
+                hint="Cash paid out toward borrowed loans"
+                accent="text-violet-700"
+              />
+              <SummaryTile
+                label="Outstanding borrowed debt"
+                value={formatCurrency(summary.outstandingBorrowedDebt)}
+                hint={`${formatCurrency(summary.overpaidBorrowedDebt)} overpaid`}
+                accent="text-amber-700"
+              />
+              <SummaryTile
+                label="Spendable after debt"
+                value={formatCurrency(summary.spendableAfterDebt)}
+                hint="Income minus expenses, repayments paid, and outstanding borrowed debt."
+                accent="text-emerald-700"
+              />
+              <SummaryTile
+                label="Money owed to me"
+                value={formatCurrency(summary.moneyOwedToMe)}
+                hint={`${formatCurrency(summary.repaymentsTowardLentLoans)} repaid to you`}
+                accent="text-cyan-700"
+              />
+              <SummaryTile label="Repayments logged" value={formatCurrency(summary.repayments)} accent="text-violet-700" />
               <SummaryTile label="Total expenses" value={formatCurrency(summary.expenses)} accent="text-rose-700" />
               <SummaryTile label="Total savings" value={formatCurrency(summary.savings)} accent="text-sky-700" />
               <SummaryTile
                 label="Unassigned net"
                 value={formatCurrency(summary.net)}
-                hint="Income minus expenses and savings transactions"
+                hint="Income minus expenses, savings, repayments paid, and outstanding borrowed debt."
               />
             </div>
 
@@ -314,7 +456,7 @@ export default function FinancePage() {
               variant="neutral"
               compact={false}
               title="Recent finance transactions"
-              subtitle="Structured rows linked back to source notes when available"
+              subtitle="Verified ledger rows linked back to source notes when available"
               accent="#f59e0b"
               className="text-left"
             >
@@ -363,6 +505,103 @@ export default function FinancePage() {
                 </div>
               ) : (
                 <EmptyState />
+              )}
+            </Card>
+
+            <Card
+              variant="neutral"
+              compact={false}
+              title="Loan and repayment events"
+              subtitle="/loan and /repay commands from Notes"
+              accent="#a78bfa"
+              className="text-left"
+            >
+              {ledgerEvents.length ? (
+                <div className="space-y-5">
+                  {summary.loanPeople.length ? (
+                    <div className="grid gap-3 md:grid-cols-2">
+                      {summary.loanPeople.map((balance) => (
+                        <div
+                          key={balance.person}
+                          className="rounded-lg border border-slate-200 bg-white/70 px-3 py-3 shadow-sm"
+                        >
+                          <div className="text-sm font-semibold text-text">{balance.person}</div>
+                          <div className="mt-2 grid gap-2 text-xs text-text/65 sm:grid-cols-2">
+                            <div>Borrowed total: {formatCurrency(balance.borrowed)}</div>
+                            <div>Debt repayments paid: {formatCurrency(Math.min(balance.repaid, balance.borrowed))}</div>
+                            <div>Lent total: {formatCurrency(balance.lent)}</div>
+                            <div>Outstanding: {formatCurrency(balance.outstandingBorrowed)}</div>
+                          </div>
+                          <div className="mt-3 flex flex-wrap gap-2">
+                            <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800">
+                              Debt: {formatCurrency(balance.outstandingBorrowed)}
+                            </span>
+                            <span className="rounded-full border border-cyan-200 bg-cyan-50 px-2 py-1 text-xs font-semibold text-cyan-800">
+                              Owed to me: {formatCurrency(balance.outstandingLent)}
+                            </span>
+                            {balance.overpaid > 0 ? (
+                              <span className="rounded-full border border-violet-200 bg-violet-50 px-2 py-1 text-xs font-semibold text-violet-800">
+                                Overpaid: {formatCurrency(balance.overpaid)}
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null}
+
+                  {summary.unmatchedRepayments.length ? (
+                    <div className="rounded-lg border border-amber-200 bg-amber-50/80 px-3 py-3 shadow-sm">
+                      <div className="text-sm font-semibold text-amber-950">Unmatched repayments</div>
+                      <div className="mt-1 text-xs leading-relaxed text-amber-900/75">
+                        These repayments have no loan with the same normalized person name. Check spelling before trusting the debt totals.
+                      </div>
+                      <div className="mt-3 grid gap-2 md:grid-cols-2">
+                        {summary.unmatchedRepayments.map((balance) => (
+                          <div
+                            key={balance.person}
+                            className="rounded-md border border-amber-200 bg-white/70 px-3 py-2 text-sm text-amber-950"
+                          >
+                            <span className="font-semibold">{balance.person}</span>: {formatCurrency(balance.repaid)}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
+
+                  {ledgerEvents.slice(0, 25).map((event) => (
+                    <article
+                      key={event.id}
+                      className="rounded-lg border border-slate-200 bg-white/70 px-3 py-3 shadow-sm"
+                    >
+                      <div className="flex flex-wrap items-center justify-between gap-2">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="rounded-full border border-white/40 bg-white/65 px-2 py-0.5 text-xs font-semibold text-text/75">
+                            /{event.command}
+                          </span>
+                          <span className="text-sm font-semibold text-violet-700">
+                            {formatCurrency(eventAmount(event))}
+                          </span>
+                        </div>
+                        <time className="text-xs text-text/55" dateTime={eventTime(event)}>
+                          {formatDate(String(eventTime(event)).slice(0, 10))}
+                        </time>
+                      </div>
+                      <div className="mt-2 text-sm leading-relaxed text-text/75">
+                        {event.payload?.person ? (
+                          <span className="font-semibold text-text">{event.payload.person}</span>
+                        ) : null}
+                        {event.payload?.direction ? <span> - {event.payload.direction}</span> : null}
+                        {event.payload?.reason ? <span> - {event.payload.reason}</span> : null}
+                      </div>
+                      {event.raw ? <div className="mt-2 text-xs text-text/45">{event.raw}</div> : null}
+                    </article>
+                  ))}
+                </div>
+              ) : (
+                <div className="rounded-lg border border-slate-200 bg-white/60 px-4 py-5 text-sm leading-relaxed text-text/70">
+                  No loan or repayment events found yet.
+                </div>
               )}
             </Card>
           </>

@@ -7,6 +7,12 @@ const COMMAND_GROUPS = [
     description: 'Track money movement. Format: command, amount, then category or short description.',
     commands: [
       { example: '/income 650 tips', note: 'Log money coming in.' },
+      { example: '/salary 4500 Bossa', note: 'Log salary from a source.' },
+      { example: '/tips 740 Bossa shift', note: 'Log manual tip income.' },
+      { example: '/tipfix 820 corrected tips', note: 'Correct raw Bossa tip evidence.' },
+      { example: '/income 9200 Bossa April verified total', note: 'Log verified ledger income.' },
+      { example: '/loan 500 Dad borrowed food', note: 'Track money borrowed or lent.' },
+      { example: '/repay 200 Dad partial food loan', note: 'Log a repayment against an open loan.' },
       { example: '/expense 150 diesel', note: 'Log money leaving the system.' },
       { example: '/savings 2000 moveout', note: 'Log money moved into savings.' },
       { example: '/moveout 500 fridge', note: 'Track a move-out fund item.' },

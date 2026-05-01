@@ -163,6 +163,10 @@ function ParsedCommandPreview({ parsed }) {
     return [label, displayValue];
   });
   if (parsed.payload?.tableNumber) detailItems.unshift(['Table', parsed.payload.tableNumber]);
+  if (parsed.payload?.source) detailItems.push(['Source', parsed.payload.source]);
+  if (parsed.payload?.person) detailItems.push(['Person', parsed.payload.person]);
+  if (parsed.payload?.direction) detailItems.push(['Direction', parsed.payload.direction]);
+  if (parsed.payload?.reason) detailItems.push(['Reason', parsed.payload.reason]);
   if (parsed.description) detailItems.push(['Label', parsed.description]);
 
   return (
@@ -305,6 +309,11 @@ export default function NotesPage() {
     try {
       const parsed = parseNoteCommand(trimmed);
       const financeParsed = parseFinanceCommand(trimmed);
+      if (parsed && !parsed.valid && !financeParsed?.valid) {
+        setError(financeParsed?.error || parsed.error || 'Command needs more detail before it can be saved.');
+        return;
+      }
+
       const { data, error: insertError } = await supabase
         .from('notes')
         .insert({
