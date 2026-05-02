@@ -74,14 +74,14 @@ function summarizeEvent(event) {
   if (isCashupEvent(event)) {
     const turnover = amountValue(amounts.turnover);
     const retained = amountValue(amounts.retained);
-    const cash = amountValue(amounts.cash);
+    const cashHome = amountValue(amounts.cashHome ?? amounts.cash);
     const retainedPercentage =
       amounts.retainedPercentage != null
         ? Number(amounts.retainedPercentage)
         : turnover > 0
         ? (retained / turnover) * 100
         : null;
-    return `Cashup: ${formatCurrency(turnover)} turnover, ${formatCurrency(retained)} retained, ${formatCurrency(cash)} cash, ${formatPercent(retainedPercentage)} retained.`;
+    return `Cashup: ${formatCurrency(turnover)} turnover, ${formatCurrency(retained)} retained, ${formatCurrency(cashHome)} cashHome, ${formatPercent(retainedPercentage)} retained.`;
   }
 
   if (isTableEvent(event)) {
@@ -193,11 +193,11 @@ export default function WaiteringPage() {
         const amounts = event.amounts || {};
         totals.turnover += amountValue(amounts.turnover);
         totals.retained += amountValue(amounts.retained);
-        totals.cash += amountValue(amounts.cash);
+        totals.cash += amountValue(amounts.cashHome ?? amounts.cash);
         totals.nonCashRetained += amountValue(
           amounts.nonCashRetained != null
             ? amounts.nonCashRetained
-            : amountValue(amounts.retained) - amountValue(amounts.cash)
+            : amountValue(amounts.retained) - amountValue(amounts.cashHome ?? amounts.cash)
         );
         return totals;
       },
@@ -209,7 +209,7 @@ export default function WaiteringPage() {
         const amounts = event.amounts || {};
         totals.turnover += amountValue(amounts.turnover);
         totals.retained += amountValue(amounts.retained);
-        totals.cash += amountValue(amounts.cash);
+        totals.cash += amountValue(amounts.cashHome ?? amounts.cash);
         return totals;
       },
       { turnover: 0, retained: 0, cash: 0 }
@@ -311,11 +311,11 @@ export default function WaiteringPage() {
               <SummaryTile
                 label="Today retained"
                 value={formatCurrency(summary.todayCashupTotals.retained)}
-                hint={`${formatCurrency(summary.todayCashupTotals.cash)} cash`}
+                hint={`${formatCurrency(summary.todayCashupTotals.cash)} cashHome`}
               />
               <SummaryTile label="Total turnover" value={formatCurrency(summary.allCashupTotals.turnover)} />
               <SummaryTile label="Total retained" value={formatCurrency(summary.allCashupTotals.retained)} />
-              <SummaryTile label="Total cash" value={formatCurrency(summary.allCashupTotals.cash)} />
+              <SummaryTile label="Total cashHome" value={formatCurrency(summary.allCashupTotals.cash)} />
               <SummaryTile
                 label="Non-cash retained"
                 value={formatCurrency(summary.allCashupTotals.nonCashRetained)}

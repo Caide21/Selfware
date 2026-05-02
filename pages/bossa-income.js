@@ -2,23 +2,17 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Head from 'next/head';
 import Link from 'next/link';
 import Card from '@/components/CardKit/Card';
-import PrimaryButton from '@/components/ui/PrimaryButton';
 import { usePageHeading } from '@/components/Layout/PageShell';
-import { createFinanceTransactionRow, parseFinanceCommand } from '@/lib/financeCommands';
-import { parseNoteCommand } from '@/lib/parseNoteCommand';
 import { supabase } from '@/lib/supabaseClient';
 
 const PAGE_HEADING = {
   emoji: '',
-  title: 'Bossa Income',
-  subtitle: 'Raw Bossa income evidence before Finance OS verification.',
+  title: 'Bossa Tracking',
+  subtitle: 'Cashups and optional table detail from Notes.',
 };
 
-const BOSSA_COMMANDS = ['salary', 'tips', 'tipfix', 'table', 'cashup'];
+const BOSSA_COMMANDS = ['table', 'cashup'];
 const BOSSA_EVENT_TYPES = [
-  'finance.salary',
-  'finance.tips',
-  'finance.tipfix',
   'waitering.table',
   'waitering.cashup',
 ];
@@ -50,18 +44,10 @@ function eventTime(event) {
   return event?.occurred_at || event?.created_at || '';
 }
 
-function eventAmount(event) {
-  return amountValue(event?.amounts?.amount);
-}
-
 function tableTip(event) {
   const amounts = event?.amounts || {};
   if (amounts.tip != null) return amountValue(amounts.tip);
   return amountValue(amounts.amountTendered) - amountValue(amounts.billTotal);
-}
-
-function isCommand(event, command) {
-  return event?.command === command || event?.event_type === `finance.${command}`;
 }
 
 function isTable(event) {
@@ -86,18 +72,15 @@ function describeEvent(event) {
   const payload = event?.payload || {};
   const amounts = event?.amounts || {};
 
-  if (isCommand(event, 'salary')) return `${formatCurrency(eventAmount(event))} salary from ${payload.source || event.description || 'source'}.`;
-  if (isCommand(event, 'tips')) return `${formatCurrency(eventAmount(event))} manual tips from ${payload.source || event.description || 'source'}.`;
-  if (isCommand(event, 'tipfix')) return `${formatCurrency(eventAmount(event))} corrected tips: ${payload.reason || event.description || 'reason logged'}.`;
   if (isTable(event)) {
     const tableNumber = payload.tableNumber || event.label?.replace(/^Table\s+/i, '') || '';
     return `Table ${tableNumber}: ${formatCurrency(amounts.billTotal)} bill, ${formatCurrency(amounts.amountTendered)} tendered, ${formatCurrency(tableTip(event))} tip.`;
   }
   if (isCashup(event)) {
-    return `Cashup: ${formatCurrency(amounts.turnover)} turnover, ${formatCurrency(amounts.retained)} retained, ${formatCurrency(amounts.cash)} cash.`;
+    return `Cashup: ${formatCurrency(amounts.turnover)} turnover, ${formatCurrency(amounts.retained)} retained, ${formatCurrency(amounts.cashHome ?? amounts.cash)} cashHome.`;
   }
 
-  return event?.raw || event?.label || 'Bossa income evidence';
+  return event?.raw || event?.label || 'Bossa tracking event';
 }
 
 export default function BossaIncomePage() {
@@ -105,8 +88,6 @@ export default function BossaIncomePage() {
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
-  const [createStatus, setCreateStatus] = useState(null);
-  const [creating, setCreating] = useState(false);
 
   usePageHeading(PAGE_HEADING);
 
@@ -122,6 +103,7 @@ export default function BossaIncomePage() {
       .select('*')
       .eq('owner_id', ownerId)
       .eq('valid', true)
+      .or('scope.eq.personal,scope.is.null')
       .or(
         `command.in.(${BOSSA_COMMANDS.join(',')}),event_type.in.(${BOSSA_EVENT_TYPES.join(',')})`
       )
@@ -154,7 +136,7 @@ export default function BossaIncomePage() {
           setEvents([]);
         }
       } catch (error) {
-        if (!cancelled) setLoadError(error?.message || 'Could not load Bossa income evidence.');
+        if (!cancelled) setLoadError(error?.message || 'Could not load Bossa tracking.');
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -168,107 +150,45 @@ export default function BossaIncomePage() {
   }, [loadBossaEvents]);
 
   const summary = useMemo(() => {
-    const salaryTotal = events.filter((event) => isCommand(event, 'salary')).reduce((total, event) => total + eventAmount(event), 0);
-    const manualTipsTotal = events.filter((event) => isCommand(event, 'tips')).reduce((total, event) => total + eventAmount(event), 0);
-    const correctedTipsTotal = events.filter((event) => isCommand(event, 'tipfix')).reduce((total, event) => total + eventAmount(event), 0);
-    const tableTipsTotal = events.filter(isTable).reduce((total, event) => total + tableTip(event), 0);
     const cashupEvents = events.filter(isCashup);
-    const reviewedTipsTotal = correctedTipsTotal > 0 ? correctedTipsTotal : manualTipsTotal + tableTipsTotal;
+    const tableEvents = events.filter(isTable);
+    const tableTipsTotal = tableEvents.reduce((total, event) => total + tableTip(event), 0);
+    const cashHomeTotal = cashupEvents.reduce((total, event) => {
+      const amounts = event?.amounts || {};
+      return total + amountValue(amounts.cashHome ?? amounts.cash);
+    }, 0);
+    const turnoverTotal = cashupEvents.reduce((total, event) => total + amountValue(event?.amounts?.turnover), 0);
+    const retainedTotal = cashupEvents.reduce((total, event) => total + amountValue(event?.amounts?.retained), 0);
 
     return {
-      salaryTotal,
-      manualTipsTotal,
-      correctedTipsTotal,
       tableTipsTotal,
+      tableEvents,
       cashupEvents,
-      suggestedTotal: salaryTotal + reviewedTipsTotal,
-      usesTipfix: correctedTipsTotal > 0,
+      cashHomeTotal,
+      turnoverTotal,
+      retainedTotal,
     };
   }, [events]);
-
-  const handleCreateVerifiedIncome = async () => {
-    if (!user?.id || summary.suggestedTotal <= 0 || creating) return;
-
-    setCreating(true);
-    setCreateStatus(null);
-
-    try {
-      const amount = summary.suggestedTotal.toFixed(2);
-      const content = `/income ${amount} Bossa verified total`;
-      const parsed = parseNoteCommand(content);
-      const financeParsed = parseFinanceCommand(content);
-
-      if (!parsed?.valid || !financeParsed?.valid) {
-        throw new Error(parsed?.error || financeParsed?.error || 'Could not structure verified income note.');
-      }
-
-      const { data: note, error: noteError } = await supabase
-        .from('notes')
-        .insert({
-          content,
-          zone: 'general',
-          note_type: 'note',
-          owner_id: user.id,
-        })
-        .select('*')
-        .single();
-
-      if (noteError) throw noteError;
-
-      const { error: eventError } = await supabase.from('note_events').insert({
-        note_id: note.id,
-        owner_id: user.id,
-        command: parsed.command,
-        event_type: parsed.event_type,
-        raw: parsed.raw,
-        label: parsed.label || null,
-        description: parsed.description || null,
-        amounts: parsed.amounts || {},
-        payload: parsed.payload || {},
-        valid: parsed.valid,
-        parse_version: parsed.parse_version || 1,
-      });
-
-      if (eventError) throw eventError;
-
-      const financeTransaction = createFinanceTransactionRow({
-        parsed: financeParsed,
-        ownerId: user.id,
-        sourceNote: note,
-      });
-
-      if (financeTransaction) {
-        const { error: financeError } = await supabase.from('finance_transactions').insert(financeTransaction);
-        if (financeError) throw financeError;
-      }
-
-      setCreateStatus(`Verified income note created: ${content}`);
-    } catch (error) {
-      setCreateStatus(error?.message || 'Could not create verified income note.');
-    } finally {
-      setCreating(false);
-    }
-  };
 
   return (
     <>
       <Head>
-        <title>Bossa Income</title>
+        <title>Bossa Tracking</title>
       </Head>
 
       <section className="mx-auto max-w-6xl space-y-6">
         <Card
           variant="neutral"
           compact={false}
-          title="Bossa income evidence"
-          subtitle="Salary, tips, table tips, and cashups live here before ledger verification."
+          title="Bossa tracking"
+          subtitle="/cashup adds cashHome to Finance OS. /table tracks optional table detail."
           accent="#f59e0b"
           className="text-left"
         >
           <div className="flex flex-col gap-3 text-sm leading-relaxed text-text/75 sm:flex-row sm:items-center sm:justify-between">
             <p>
-              Raw Bossa commands are not Finance OS totals. Review the evidence, then create a verified{' '}
-              <span className="font-semibold">/income</span> note when the number is ready.
+              Use <span className="font-semibold">/cashup</span> for shift cash taken home and{' '}
+              <span className="font-semibold">/table</span> when you want extra table detail.
             </p>
             <div className="flex flex-wrap gap-2">
               <Link
@@ -293,61 +213,24 @@ export default function BossaIncomePage() {
           </div>
         ) : null}
 
-        {loading ? <div className="text-sm text-text/60">Loading Bossa income evidence...</div> : null}
+        {loading ? <div className="text-sm text-text/60">Loading Bossa tracking...</div> : null}
 
         {!loading && !user ? (
           <div className="rounded-xl border border-slate-200 bg-white px-4 py-6 text-sm text-text/80 shadow-sm">
-            Sign in to view Bossa income evidence.
+            Sign in to view Bossa tracking.
           </div>
         ) : null}
 
         {!loading && user ? (
           <>
             <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-              <SummaryTile label="Salary total" value={formatCurrency(summary.salaryTotal)} accent="text-emerald-700" />
-              <SummaryTile label="Manual tips" value={formatCurrency(summary.manualTipsTotal)} accent="text-amber-700" />
-              <SummaryTile
-                label="Corrected tips"
-                value={formatCurrency(summary.correctedTipsTotal)}
-                hint={summary.usesTipfix ? 'Used for suggested total.' : 'No /tipfix override logged.'}
-                accent="text-orange-700"
-              />
-              <SummaryTile label="Table-derived tips" value={formatCurrency(summary.tableTipsTotal)} accent="text-cyan-700" />
+              <SummaryTile label="Finance OS income" value={formatCurrency(summary.cashHomeTotal)} hint="Cash taken home from /cashup." accent="text-emerald-700" />
               <SummaryTile label="Cashups logged" value={summary.cashupEvents.length} />
-              <SummaryTile
-                label="Suggested Bossa total"
-                value={formatCurrency(summary.suggestedTotal)}
-                hint={summary.usesTipfix ? 'Salary plus corrected tips.' : 'Salary plus manual and table tips.'}
-                accent="text-emerald-700"
-              />
+              <SummaryTile label="Turnover tracked" value={formatCurrency(summary.turnoverTotal)} hint="Tracking only. Not income." accent="text-amber-700" />
+              <SummaryTile label="Retained tracked" value={formatCurrency(summary.retainedTotal)} hint="Tracking only. Not income." accent="text-orange-700" />
+              <SummaryTile label="Tables logged" value={summary.tableEvents.length} />
+              <SummaryTile label="Table-derived tips" value={formatCurrency(summary.tableTipsTotal)} accent="text-cyan-700" />
             </div>
-
-            <Card
-              variant="neutral"
-              compact={false}
-              title="Verification action"
-              subtitle="This writes a normal Notes command. It does not mutate raw Bossa evidence."
-              accent="#34d399"
-              className="text-left"
-            >
-              <div className="flex flex-col gap-3 text-sm leading-relaxed text-text/75 sm:flex-row sm:items-center sm:justify-between">
-                <p>
-                  Suggested command:{' '}
-                  <code className="rounded bg-white/60 px-2 py-1 text-xs text-text">
-                    /income {summary.suggestedTotal.toFixed(2)} Bossa verified total
-                  </code>
-                </p>
-                <PrimaryButton
-                  type="button"
-                  onClick={handleCreateVerifiedIncome}
-                  disabled={creating || summary.suggestedTotal <= 0}
-                  className="px-4 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {creating ? 'Creating...' : 'Create verified /income note'}
-                </PrimaryButton>
-              </div>
-              {createStatus ? <div className="mt-3 text-sm text-text/65">{createStatus}</div> : null}
-            </Card>
 
             <Card
               variant="neutral"
@@ -382,8 +265,8 @@ export default function BossaIncomePage() {
             <Card
               variant="neutral"
               compact={false}
-              title="Recent Bossa evidence"
-              subtitle="/salary, /tips, /tipfix, /table, and /cashup commands from Notes"
+              title="Recent Bossa tracking"
+              subtitle="/cashup and /table commands from Notes"
               accent="#f59e0b"
               className="text-left"
             >
@@ -407,7 +290,7 @@ export default function BossaIncomePage() {
                 </div>
               ) : (
                 <div className="rounded-lg border border-slate-200 bg-white/60 px-4 py-5 text-sm leading-relaxed text-text/70">
-                  No Bossa income evidence found yet. Capture raw logs in Notes with /salary, /tips, /tipfix, /table, or /cashup.
+                  No Bossa tracking found yet. Capture logs in Notes with /cashup or /table.
                 </div>
               )}
             </Card>

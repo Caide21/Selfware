@@ -3,27 +3,29 @@ import { useState } from 'react';
 
 const COMMAND_GROUPS = [
   {
-    title: 'Finance',
-    description: 'Track money movement. Format: command, amount, then category or short description.',
+    title: 'Personal Finance',
+    description: 'Private money movement for your own Finance OS.',
     commands: [
-      { example: '/income 650 tips', note: 'Log money coming in.' },
-      { example: '/salary 4500 Bossa', note: 'Log salary from a source.' },
-      { example: '/tips 740 Bossa shift', note: 'Log manual tip income.' },
-      { example: '/tipfix 820 corrected tips', note: 'Correct raw Bossa tip evidence.' },
-      { example: '/income 9200 Bossa April verified total', note: 'Log verified ledger income.' },
+      { example: '/income 6032 Bossa salary and card tips', note: 'Log personal income.' },
+      { example: '/expense 250 fuel work travel', note: 'Log personal spending.' },
       { example: '/loan 500 Dad borrowed food', note: 'Track money borrowed or lent.' },
       { example: '/repay 200 Dad partial food loan', note: 'Log a repayment against an open loan.' },
-      { example: '/expense 150 diesel', note: 'Log money leaving the system.' },
-      { example: '/savings 2000 moveout', note: 'Log money moved into savings.' },
-      { example: '/moveout 500 fridge', note: 'Track a move-out fund item.' },
+      { example: '/cashup 7000 800 500', note: 'Add cashHome to personal Finance OS income.' },
     ],
   },
   {
-    title: 'Waitering',
-    description: 'Capture shift numbers. Table format is table, bill total, amount tendered.',
+    title: 'Bossa Tracking',
+    description: 'Optional shift detail. Table entries do not affect Finance OS totals.',
     commands: [
       { example: '/table 308 857 957', note: 'Log a table payment and tip.' },
-      { example: '/cashup 7000 800 100', note: 'Log turnover, retained amount, and cash.' },
+    ],
+  },
+  {
+    title: 'Move-Out HQ',
+    description: 'Shared move-out costs and contributions. Private finance stays private.',
+    commands: [
+      { example: '/sharedexpense amount category reason', note: 'Log a shared move-out cost.' },
+      { example: '/contribute amount goal reason', note: 'Log money set aside for the mission.' },
     ],
   },
   {

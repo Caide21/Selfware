@@ -38,14 +38,20 @@ const PORTAL_LINKS = [
   },
   {
     href: '/finance',
-    title: 'Finance OS',
-    copy: 'Verified ledger entries for income, expenses, loans, and repayments.',
+    title: 'My Finance OS',
+    copy: 'Private income, expenses, loans, repayments, and cash-up cashHome totals.',
+    accent: '#34d399',
+  },
+  {
+    href: '/shared-finance',
+    title: 'Move-Out HQ',
+    copy: 'Track what you need, what is contributed, and how close the mission is.',
     accent: '#34d399',
   },
   {
     href: '/bossa-income',
-    title: 'Bossa Income',
-    copy: 'Raw Bossa salary, tips, table tips, and cashups before verification.',
+    title: 'Bossa Tracking',
+    copy: 'Cashups and optional table detail from Notes.',
     accent: '#f59e0b',
   },
 ];

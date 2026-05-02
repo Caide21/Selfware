@@ -7,8 +7,8 @@ import { supabase } from '@/lib/supabaseClient';
 
 const PAGE_HEADING = {
   emoji: '',
-  title: 'Finance OS',
-  subtitle: 'Verified ledger entries from Notes commands.',
+  title: 'My Finance OS',
+  subtitle: 'Private income, expenses, loans, repayments, and cash-up cashHome from your Notes commands.',
 };
 
 const MOVE_OUT_TARGET = 55000;
@@ -97,16 +97,18 @@ function TargetCard({ label, value, target, hint, tone }) {
 function EmptyState() {
   return (
     <div className="rounded-lg border border-slate-200 bg-white/60 px-4 py-5 text-sm leading-relaxed text-text/70">
-      No finance ledger entries found yet. Capture verified money movement in Notes with{' '}
+      No finance ledger entries found yet. Capture money movement in Notes with{' '}
       <span className="font-semibold text-text">/income</span>,{' '}
-      <span className="font-semibold text-text">/expense</span>, or{' '}
-      <span className="font-semibold text-text">/loan</span>.
+      <span className="font-semibold text-text">/expense</span>,{' '}
+      <span className="font-semibold text-text">/loan</span>,{' '}
+      <span className="font-semibold text-text">/repay</span>, or{' '}
+      <span className="font-semibold text-text">/cashup</span>.
     </div>
   );
 }
 
-const LEDGER_EVENT_COMMANDS = ['loan', 'repay'];
-const LEDGER_EVENT_TYPES = ['finance.loan', 'finance.repay'];
+const LEDGER_EVENT_COMMANDS = ['loan', 'repay', 'cashup'];
+const LEDGER_EVENT_TYPES = ['finance.loan', 'finance.repay', 'waitering.cashup'];
 
 function eventTime(event) {
   return event?.occurred_at || event?.created_at || '';
@@ -122,6 +124,15 @@ function isLoanEvent(event) {
 
 function isRepayEvent(event) {
   return event?.command === 'repay' || event?.event_type === 'finance.repay';
+}
+
+function isCashupEvent(event) {
+  return event?.command === 'cashup' || event?.event_type === 'waitering.cashup';
+}
+
+function cashupCashHome(event) {
+  const amounts = event?.amounts || {};
+  return amountValue(amounts.cashHome ?? amounts.cash);
 }
 
 function eventPerson(event) {
@@ -163,6 +174,7 @@ export default function FinancePage() {
       .select('*')
       .eq('owner_id', ownerId)
       .eq('valid', true)
+      .or('scope.eq.personal,scope.is.null')
       .or(
         `command.in.(${LEDGER_EVENT_COMMANDS.join(',')}),event_type.in.(${LEDGER_EVENT_TYPES.join(',')})`
       )
@@ -251,7 +263,18 @@ export default function FinancePage() {
 
     const loanBalances = new Map();
 
-    ledgerEvents.forEach((event) => {
+    ledgerEvents.filter(isCashupEvent).forEach((event) => {
+      const amount = cashupCashHome(event);
+      totals.income += amount;
+      if (monthKey(String(eventTime(event)).slice(0, 10)) === currentMonth) {
+        totals.monthIncome += amount;
+      }
+
+      const key = monthKey(String(eventTime(event)).slice(0, 10));
+      if (key) totals.incomeByMonth[key] = (totals.incomeByMonth[key] || 0) + amount;
+    });
+
+    ledgerEvents.filter((event) => isLoanEvent(event) || isRepayEvent(event)).forEach((event) => {
       const amount = eventAmount(event);
       const personKey = eventPerson(event);
       if (!personKey) return;
@@ -305,7 +328,7 @@ export default function FinancePage() {
 
     return {
       ...totals,
-      verifiedIncome: totals.income,
+      incomeTotal: totals.income,
       outstandingBorrowedDebt,
       borrowedDebtRepaymentsPaid: totals.repaymentsTowardBorrowedLoans,
       spendableAfterDebt: totals.income - totals.expenses - totals.repaymentsTowardBorrowedLoans - outstandingBorrowedDebt,
@@ -328,23 +351,32 @@ export default function FinancePage() {
         <Card
           variant="neutral"
           compact={false}
-          title="Financial OS"
-          subtitle="Verified income and expense entries power totals; raw Bossa evidence stays in Bossa Income."
+          title="My Finance OS"
+          subtitle="Only your personal commands power these totals."
           accent="#34d399"
           className="text-left"
         >
           <div className="flex flex-col gap-3 text-sm leading-relaxed text-text/75 sm:flex-row sm:items-center sm:justify-between">
             <p>
               Capture with <span className="font-semibold">/income</span>,{' '}
-              <span className="font-semibold">/expense</span>, or{' '}
-              <span className="font-semibold">/loan</span>. Bossa raw logs are evidence only until verified.
+              <span className="font-semibold">/expense</span>,{' '}
+              <span className="font-semibold">/loan</span>,{' '}
+              <span className="font-semibold">/repay</span>, or{' '}
+              <span className="font-semibold">/cashup</span>. Salary and card tips stay out of Finance OS unless entered as{' '}
+              <span className="font-semibold">/income</span>.
             </p>
             <div className="flex flex-wrap gap-2">
+              <Link
+                href="/shared-finance"
+                className="inline-flex shrink-0 items-center justify-center rounded-full border border-cyan-200 bg-white/65 px-4 py-2 text-sm font-semibold text-cyan-800 shadow hover:bg-white"
+              >
+                Move-Out HQ
+              </Link>
               <Link
                 href="/bossa-income"
                 className="inline-flex shrink-0 items-center justify-center rounded-full border border-emerald-200 bg-white/65 px-4 py-2 text-sm font-semibold text-emerald-800 shadow hover:bg-white"
               >
-                Review Bossa Income
+                Bossa Tracking
               </Link>
               <Link
                 href="/notes"
@@ -373,7 +405,7 @@ export default function FinancePage() {
         {!loading && user ? (
           <>
             <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
-              <SummaryTile label="Verified income" value={formatCurrency(summary.verifiedIncome)} accent="text-emerald-700" />
+              <SummaryTile label="Income" value={formatCurrency(summary.incomeTotal)} accent="text-emerald-700" />
               <SummaryTile label="Borrowed loans total" value={formatCurrency(summary.borrowedLoanTotal)} accent="text-amber-700" />
               <SummaryTile
                 label="Debt repayments paid"
@@ -456,7 +488,7 @@ export default function FinancePage() {
               variant="neutral"
               compact={false}
               title="Recent finance transactions"
-              subtitle="Verified ledger rows linked back to source notes when available"
+              subtitle="Ledger rows linked back to source notes when available"
               accent="#f59e0b"
               className="text-left"
             >
@@ -516,7 +548,7 @@ export default function FinancePage() {
               accent="#a78bfa"
               className="text-left"
             >
-              {ledgerEvents.length ? (
+              {ledgerEvents.filter((event) => isLoanEvent(event) || isRepayEvent(event)).length ? (
                 <div className="space-y-5">
                   {summary.loanPeople.length ? (
                     <div className="grid gap-3 md:grid-cols-2">
@@ -569,7 +601,7 @@ export default function FinancePage() {
                     </div>
                   ) : null}
 
-                  {ledgerEvents.slice(0, 25).map((event) => (
+                  {ledgerEvents.filter((event) => isLoanEvent(event) || isRepayEvent(event)).slice(0, 25).map((event) => (
                     <article
                       key={event.id}
                       className="rounded-lg border border-slate-200 bg-white/70 px-3 py-3 shadow-sm"
