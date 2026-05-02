@@ -9,7 +9,7 @@ import GhostButton from '@/components/ui/GhostButton';
 import PrimaryButton from '@/components/ui/PrimaryButton';
 import { createNoteInteractionTarget } from '@/lib/interactions/noteTargets';
 import { createFinanceTransactionRow, parseFinanceCommand } from '@/lib/financeCommands';
-import { createHousehold, listHouseholds } from '@/lib/households';
+import { canCreateContribution, canCreateSharedExpense, createHousehold, getHouseholdRole, listHouseholds, roleLabel } from '@/lib/households';
 import { parseNoteCommand } from '@/lib/parseNoteCommand';
 import { supabase } from '@/lib/supabaseClient';
 
@@ -317,7 +317,7 @@ export default function NotesPage() {
     setWarning(null);
 
     try {
-      const household = await createHousehold(supabase, { name: householdName, userId: user.id });
+      const household = await createHousehold(supabase, { name: householdName });
       setHouseholds((current) => [...current, household]);
       setSelectedScope('household');
       setSelectedHouseholdId(household.id);
@@ -357,6 +357,18 @@ export default function NotesPage() {
         return;
       }
 
+      const selectedHousehold = households.find((household) => household.id === selectedHouseholdId) || null;
+      const currentRole = getHouseholdRole(selectedHousehold, user.id);
+      if (sharedCommand && parsed?.command === 'sharedexpense' && !canCreateSharedExpense(currentRole)) {
+        setError('You do not have permission to add shared expenses for this household.');
+        return;
+      }
+
+      if (sharedCommand && parsed?.command === 'contribute' && !canCreateContribution(currentRole)) {
+        setError('You do not have permission to contribute to this household.');
+        return;
+      }
+
       const noteScope = sharedCommand ? 'household' : 'personal';
       const householdId = sharedCommand ? selectedHouseholdId : null;
 
@@ -376,6 +388,7 @@ export default function NotesPage() {
       if (insertError) throw insertError;
 
       if (parsed?.valid) {
+        // TODO: Enforce per-command household permissions directly in note_events RLS.
         const { error: eventInsertError } = await supabase.from('note_events').insert({
           note_id: data.id,
           owner_id: user.id,
@@ -452,6 +465,8 @@ export default function NotesPage() {
   const showEmpty = !authLoading && !notesLoading && user && notes.length === 0;
   const parsedCommand = parseFinanceCommand(content) || parseNoteCommand(content);
   const parsedIsShared = isSharedCommand(parsedCommand);
+  const selectedHousehold = households.find((household) => household.id === selectedHouseholdId) || null;
+  const currentHouseholdRole = getHouseholdRole(selectedHousehold, user?.id);
   const actionContext = {
     supabase,
     onDeleteNote: (noteId) => {
@@ -505,6 +520,11 @@ export default function NotesPage() {
                 <p className="text-xs leading-relaxed text-text/50">
                   Personal commands stay private. Shared scope is only used for /sharedexpense and /contribute.
                 </p>
+                {selectedScope === 'household' && selectedHouseholdId ? (
+                  <p className="text-xs leading-relaxed text-text/55">
+                    Your household role: {roleLabel(currentHouseholdRole)}.
+                  </p>
+                ) : null}
               </div>
 
               {selectedScope === 'household' ? (

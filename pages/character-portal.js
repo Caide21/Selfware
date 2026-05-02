@@ -1,9 +1,12 @@
 import Head from 'next/head';
+import { useEffect, useMemo, useState } from 'react';
 import Card from '@/components/CardKit/Card';
 import PrimaryButton from '@/components/ui/PrimaryButton';
 import GhostButton from '@/components/ui/GhostButton';
 import { usePageHeading } from '@/components/Layout/PageShell';
 import { PortalCard } from '@/components/Selfware/PlaceholderView';
+import { userOwnsAnyHousehold } from '@/lib/households';
+import { supabase } from '@/lib/supabaseClient';
 
 const PAGE_HEADING = {
   emoji: '',
@@ -57,7 +60,50 @@ const PORTAL_LINKS = [
 ];
 
 export default function CharacterPortalPage() {
+  const [showAdminMemberLookup, setShowAdminMemberLookup] = useState(false);
+
   usePageHeading(PAGE_HEADING);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const bootstrap = async () => {
+      setShowAdminMemberLookup(false);
+      try {
+        const { data, error } = await supabase.auth.getUser();
+        if (error) throw error;
+
+        const userId = data?.user?.id;
+        if (!userId || cancelled) return;
+
+        const isOwner = await userOwnsAnyHousehold(supabase, userId);
+        if (!cancelled) setShowAdminMemberLookup(isOwner);
+      } catch (roleError) {
+        console.warn('Portal admin visibility check failed', roleError);
+        if (!cancelled) setShowAdminMemberLookup(false);
+      }
+    };
+
+    bootstrap();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const portalLinks = useMemo(() => {
+    if (!showAdminMemberLookup) return PORTAL_LINKS;
+
+    return [
+      ...PORTAL_LINKS,
+      {
+        href: '/admin/members',
+        title: 'Admin / Member Lookup',
+        copy: 'Find user IDs and manage shared access.',
+        accent: '#60a5fa',
+      },
+    ];
+  }, [showAdminMemberLookup]);
 
   return (
     <>
@@ -83,7 +129,7 @@ export default function CharacterPortalPage() {
         </Card>
 
         <div className="grid gap-5 sm:grid-cols-2">
-          {PORTAL_LINKS.map((link) => (
+          {portalLinks.map((link) => (
             <PortalCard key={link.href} {...link} />
           ))}
         </div>

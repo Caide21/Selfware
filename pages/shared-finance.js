@@ -3,7 +3,17 @@ import Head from 'next/head';
 import Link from 'next/link';
 import Card from '@/components/CardKit/Card';
 import { usePageHeading } from '@/components/Layout/PageShell';
-import { addHouseholdMemberByUserId, createHousehold, isHouseholdOwner, listHouseholds } from '@/lib/households';
+import {
+  addHouseholdMember,
+  canManageHouseholdMembers,
+  createHousehold,
+  getHouseholdRole,
+  listHouseholds,
+  MANAGEABLE_ROLES,
+  removeHouseholdMember,
+  roleLabel,
+  updateHouseholdMemberRole,
+} from '@/lib/households';
 import { supabase } from '@/lib/supabaseClient';
 
 const PAGE_HEADING = {
@@ -133,6 +143,7 @@ export default function SharedFinancePage() {
   const [selectedHouseholdId, setSelectedHouseholdId] = useState('');
   const [householdName, setHouseholdName] = useState('');
   const [memberUserId, setMemberUserId] = useState('');
+  const [memberRole, setMemberRole] = useState('contributor');
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [eventsLoading, setEventsLoading] = useState(false);
@@ -219,7 +230,9 @@ export default function SharedFinancePage() {
   }, [loadSharedEvents, selectedHouseholdId, user?.id]);
 
   const selectedHousehold = households.find((household) => household.id === selectedHouseholdId) || null;
-  const canManageMembers = isHouseholdOwner(selectedHousehold, user?.id);
+  const currentRole = getHouseholdRole(selectedHousehold, user?.id);
+  const canManageMembers = canManageHouseholdMembers(currentRole);
+  const householdMembers = selectedHousehold?.household_members || [];
 
   const refreshHouseholds = useCallback(async () => {
     const householdData = await listHouseholds(supabase);
@@ -235,7 +248,7 @@ export default function SharedFinancePage() {
     setLoadError(null);
 
     try {
-      const household = await createHousehold(supabase, { name: householdName, userId: user.id });
+      const household = await createHousehold(supabase, { name: householdName });
       setHouseholds((current) => [...current, household]);
       setSelectedHouseholdId(household.id);
       setHouseholdName('');
@@ -251,14 +264,47 @@ export default function SharedFinancePage() {
     setLoadError(null);
 
     try {
-      await addHouseholdMemberByUserId(supabase, {
+      await addHouseholdMember(supabase, {
         householdId: selectedHouseholdId,
         userId: memberUserId,
+        role: memberRole,
       });
       setMemberUserId('');
+      setMemberRole('contributor');
       await refreshHouseholds();
     } catch (error) {
       setLoadError(error?.message || 'Could not add household member.');
+    }
+  };
+
+  const handleUpdateMemberRole = async (memberUserIdToUpdate, role) => {
+    if (!selectedHouseholdId) return;
+
+    setLoadError(null);
+    try {
+      await updateHouseholdMemberRole(supabase, {
+        householdId: selectedHouseholdId,
+        userId: memberUserIdToUpdate,
+        role,
+      });
+      await refreshHouseholds();
+    } catch (error) {
+      setLoadError(error?.message || 'Could not update member role.');
+    }
+  };
+
+  const handleRemoveMember = async (memberUserIdToRemove) => {
+    if (!selectedHouseholdId) return;
+
+    setLoadError(null);
+    try {
+      await removeHouseholdMember(supabase, {
+        householdId: selectedHouseholdId,
+        userId: memberUserIdToRemove,
+      });
+      await refreshHouseholds();
+    } catch (error) {
+      setLoadError(error?.message || 'Could not remove member.');
     }
   };
 
@@ -415,34 +461,102 @@ export default function SharedFinancePage() {
                 </div>
 
                 <div className="space-y-2">
-                  <div className="text-xs font-semibold uppercase tracking-wide text-text/55">Members</div>
-                  <div className="rounded-lg border border-slate-200 bg-white/60 px-3 py-2 text-xs leading-relaxed text-text/65">
-                    {(selectedHousehold?.household_members || []).length
-                      ? selectedHousehold.household_members
-                          .map((member) => `${ownerLabel(member.user_id, user?.id)} (${member.role})`)
-                          .join(', ')
-                      : 'No members visible yet.'}
+                  <div className="text-xs font-semibold uppercase tracking-wide text-text/55">Your role</div>
+                  <div className="rounded-lg border border-slate-200 bg-white/60 px-3 py-2 text-sm text-text/70">
+                    {roleLabel(currentRole)}
                   </div>
-                  {canManageMembers ? (
-                    <form onSubmit={handleAddMember} className="flex gap-2">
-                      <input
-                        value={memberUserId}
-                        onChange={(event) => setMemberUserId(event.target.value)}
-                        placeholder="Member user_id"
-                        className="min-w-0 flex-1 rounded-md border border-slate-200 bg-white/70 px-3 py-2 text-sm text-text placeholder:text-text/40 focus:border-cyan-400 focus:outline-none"
-                      />
-                      <button
-                        type="submit"
-                        disabled={!memberUserId.trim()}
-                        className="rounded-md border border-cyan-200 bg-white/70 px-3 py-2 text-xs font-semibold text-cyan-800 shadow disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        Add
-                      </button>
-                    </form>
-                  ) : (
-                    <div className="text-xs text-text/55">Only a household owner can add members.</div>
-                  )}
                 </div>
+              </div>
+            </Card>
+
+            <Card
+              variant="neutral"
+              compact={false}
+              title="Members & Permissions"
+              subtitle="Owner manages the plan. Editor can add costs and contributions. Contributor can contribute. Viewer can only view."
+              accent="#2dd4bf"
+              className="text-left"
+            >
+              <div className="space-y-3">
+                {householdMembers.length ? householdMembers.map((member) => {
+                  const isSelf = member.user_id === user?.id;
+                  const canEditThisMember = canManageMembers && !isSelf && member.role !== 'owner';
+                  return (
+                    <div key={member.user_id} className="rounded-lg border border-slate-200 bg-white/70 px-3 py-3">
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <div className="text-sm font-semibold text-text">
+                            {ownerLabel(member.user_id, user?.id)}
+                          </div>
+                          <div className="text-xs text-text/55">{member.user_id}</div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          {canEditThisMember ? (
+                            <select
+                              value={member.role}
+                              onChange={(event) => handleUpdateMemberRole(member.user_id, event.target.value)}
+                              className="rounded-md border border-slate-200 bg-white px-2 py-1.5 text-xs text-text focus:border-cyan-400 focus:outline-none"
+                            >
+                              {MANAGEABLE_ROLES.map((role) => (
+                                <option key={role} value={role}>
+                                  {roleLabel(role)}
+                                </option>
+                              ))}
+                            </select>
+                          ) : (
+                            <div className="rounded-md border border-slate-200 bg-white/70 px-2 py-1.5 text-xs text-text/70">
+                              {roleLabel(member.role)}
+                            </div>
+                          )}
+                          {canEditThisMember ? (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveMember(member.user_id)}
+                              className="rounded-md border border-rose-200 bg-rose-50 px-2 py-1.5 text-xs font-semibold text-rose-700"
+                            >
+                              Remove
+                            </button>
+                          ) : null}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }) : (
+                  <div className="rounded-lg border border-slate-200 bg-white/60 px-3 py-3 text-sm text-text/65">
+                    No members visible yet.
+                  </div>
+                )}
+
+                {canManageMembers ? (
+                  <form onSubmit={handleAddMember} className="grid gap-2 sm:grid-cols-[1fr_auto_auto]">
+                    <input
+                      value={memberUserId}
+                      onChange={(event) => setMemberUserId(event.target.value)}
+                      placeholder="Member user_id"
+                      className="min-w-0 rounded-md border border-slate-200 bg-white/70 px-3 py-2 text-sm text-text placeholder:text-text/40 focus:border-cyan-400 focus:outline-none"
+                    />
+                    <select
+                      value={memberRole}
+                      onChange={(event) => setMemberRole(event.target.value)}
+                      className="rounded-md border border-slate-200 bg-white/70 px-3 py-2 text-sm text-text focus:border-cyan-400 focus:outline-none"
+                    >
+                      {MANAGEABLE_ROLES.map((role) => (
+                        <option key={role} value={role}>
+                          {roleLabel(role)}
+                        </option>
+                      ))}
+                    </select>
+                    <button
+                      type="submit"
+                      disabled={!memberUserId.trim()}
+                      className="rounded-md border border-cyan-200 bg-white/70 px-3 py-2 text-xs font-semibold text-cyan-800 shadow disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Add member
+                    </button>
+                  </form>
+                ) : (
+                  <div className="text-xs text-text/55">Only an owner can manage members and roles.</div>
+                )}
               </div>
             </Card>
 
