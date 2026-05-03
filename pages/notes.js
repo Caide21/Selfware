@@ -7,9 +7,16 @@ import { TextAreaAuto } from '@/components/Form';
 import CommandKeyDrawer from '@/components/Notes/CommandKeyDrawer';
 import GhostButton from '@/components/ui/GhostButton';
 import PrimaryButton from '@/components/ui/PrimaryButton';
+import { bossaScheduleMigrationMessage, isMissingBossaScheduleTable, saveWeeklyShiftsFromCommand } from '@/lib/bossaSchedule';
 import { createNoteInteractionTarget } from '@/lib/interactions/noteTargets';
 import { createFinanceTransactionRow, parseFinanceCommand } from '@/lib/financeCommands';
 import { canCreateContribution, canCreateSharedExpense, createHousehold, getHouseholdRole, listHouseholds, roleLabel } from '@/lib/households';
+import {
+  applyRoutineCommand,
+  isMissingMaintenanceLoopEnforcementSchema,
+  maintenanceLoopEnforcementMigrationMessage,
+} from '@/lib/maintenanceLoops';
+import { applyPartyTimeCommand, isMissingPartySessionsTable, partySessionsMigrationMessage } from '@/lib/partySessions';
 import { parseNoteCommand } from '@/lib/parseNoteCommand';
 import { supabase } from '@/lib/supabaseClient';
 
@@ -235,12 +242,14 @@ export default function NotesPage() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
   const [warning, setWarning] = useState(null);
+  const [notice, setNotice] = useState(null);
 
   usePageHeading(PAGE_HEADING);
 
   const fetchNotes = useCallback(async (ownerId) => {
     setNotesLoading(true);
     setError(null);
+    setNotice(null);
 
     try {
       const { data, error: fetchError } = await supabase
@@ -315,6 +324,7 @@ export default function NotesPage() {
 
     setError(null);
     setWarning(null);
+    setNotice(null);
 
     try {
       const household = await createHousehold(supabase, { name: householdName });
@@ -342,6 +352,7 @@ export default function NotesPage() {
     setSaving(true);
     setError(null);
     setWarning(null);
+    setNotice(null);
 
     try {
       const parsed = parseNoteCommand(trimmed);
@@ -428,6 +439,60 @@ export default function NotesPage() {
         }
       }
 
+      if (parsed?.valid && parsed.command === 'routine') {
+        try {
+          const routineResult = await applyRoutineCommand(supabase, {
+            parsed,
+            ownerId: user.id,
+            sourceNoteId: data.id,
+          });
+          if (routineResult?.message) setNotice(routineResult.message);
+        } catch (routineError) {
+          console.error('Failed to apply routine command', routineError);
+          if (isMissingMaintenanceLoopEnforcementSchema(routineError)) {
+            setWarning(`Note saved, but routine command needs database setup. ${maintenanceLoopEnforcementMigrationMessage()}`);
+          } else {
+            setWarning(routineError?.message || 'Note saved, but the maintenance loop could not be updated.');
+          }
+        }
+      }
+
+      if (parsed?.valid && parsed.command === 'weeklyshifts') {
+        try {
+          const savedShifts = await saveWeeklyShiftsFromCommand(supabase, {
+            parsed,
+            ownerId: user.id,
+            sourceNoteId: data.id,
+          });
+          if (savedShifts?.length) setNotice('Weekly Bossa shifts saved. Signal restored.');
+        } catch (scheduleError) {
+          console.error('Failed to save weekly shifts', scheduleError);
+          if (isMissingBossaScheduleTable(scheduleError)) {
+            setWarning(`Note saved, but weekly shifts need database setup. ${bossaScheduleMigrationMessage()}`);
+          } else {
+            setWarning(scheduleError?.message || 'Note saved, but the weekly shifts could not be structured yet.');
+          }
+        }
+      }
+
+      if (parsed?.valid && ['partytime', 'endpartytime'].includes(parsed.command)) {
+        try {
+          const partyResult = await applyPartyTimeCommand(supabase, {
+            parsed,
+            ownerId: user.id,
+            sourceNote: data,
+          });
+          if (partyResult?.message) setNotice(partyResult.message);
+        } catch (partyError) {
+          console.error('Failed to apply Party Time command', partyError);
+          if (isMissingPartySessionsTable(partyError)) {
+            setWarning(`Note saved, but Party Time needs database setup. ${partySessionsMigrationMessage()}`);
+          } else {
+            setWarning(partyError?.message || 'Note saved, but Party Time could not be updated.');
+          }
+        }
+      }
+
       setNotes((current) => [data, ...current]);
       setContent('');
     } catch (insertError) {
@@ -459,6 +524,7 @@ export default function NotesPage() {
     if (updateError) throw updateError;
 
     setNotes((current) => current.map((note) => (note.id === noteId ? data : note)));
+    setNotice('Note updated. Signal restored.');
   };
 
   const showSignInRequired = !authLoading && !user;
@@ -471,6 +537,9 @@ export default function NotesPage() {
     supabase,
     onDeleteNote: (noteId) => {
       setNotes((current) => current.filter((note) => note.id !== noteId));
+      setError(null);
+      setWarning(null);
+      setNotice('Note deleted. Command data cleared.');
     },
   };
 
@@ -598,6 +667,12 @@ export default function NotesPage() {
         {warning ? (
           <div className="rounded-md border border-amber-300/25 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
             {warning}
+          </div>
+        ) : null}
+
+        {notice ? (
+          <div className="rounded-md border border-emerald-300/25 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-100">
+            {notice}
           </div>
         ) : null}
 

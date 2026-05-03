@@ -23,6 +23,7 @@ function amountValue(value) {
 function formatCurrency(amount) {
   const num = Number(amount || 0);
   if (!Number.isFinite(num)) return 'R 0.00';
+  if (num < 0) return `-R ${Math.abs(num).toFixed(2)}`;
   return `R ${num.toFixed(2)}`;
 }
 
@@ -34,6 +35,19 @@ function formatDate(value) {
     month: 'short',
     day: 'numeric',
     year: 'numeric',
+  }).format(date);
+}
+
+function formatDateTime(value) {
+  if (!value) return '';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+    hour: 'numeric',
+    minute: '2-digit',
   }).format(date);
 }
 
@@ -108,7 +122,9 @@ function EmptyState() {
 }
 
 const LEDGER_EVENT_COMMANDS = ['loan', 'repay', 'cashup'];
+const RECONCILIATION_EVENT_COMMANDS = ['updatefunds'];
 const LEDGER_EVENT_TYPES = ['finance.loan', 'finance.repay', 'waitering.cashup'];
+const RECONCILIATION_EVENT_TYPES = ['finance.updatefunds'];
 
 function eventTime(event) {
   return event?.occurred_at || event?.created_at || '';
@@ -128,6 +144,16 @@ function isRepayEvent(event) {
 
 function isCashupEvent(event) {
   return event?.command === 'cashup' || event?.event_type === 'waitering.cashup';
+}
+
+function isUpdateFundsEvent(event) {
+  return event?.command === 'updatefunds' || event?.event_type === 'finance.updatefunds';
+}
+
+function driftLabel(value) {
+  if (value < 0) return 'Untracked outflow / drift';
+  if (value > 0) return 'Untracked inflow / correction';
+  return 'System matches reality';
 }
 
 function cashupCashHome(event) {
@@ -176,7 +202,7 @@ export default function FinancePage() {
       .eq('valid', true)
       .or('scope.eq.personal,scope.is.null')
       .or(
-        `command.in.(${LEDGER_EVENT_COMMANDS.join(',')}),event_type.in.(${LEDGER_EVENT_TYPES.join(',')})`
+        `command.in.(${[...LEDGER_EVENT_COMMANDS, ...RECONCILIATION_EVENT_COMMANDS].join(',')}),event_type.in.(${[...LEDGER_EVENT_TYPES, ...RECONCILIATION_EVENT_TYPES].join(',')})`
       )
       .order('occurred_at', { ascending: false, nullsFirst: false })
       .order('created_at', { ascending: false })
@@ -325,6 +351,13 @@ export default function FinancePage() {
     const averageIncome = incomeMonths.length ? totals.income / incomeMonths.length : 0;
     const outstandingBorrowedDebt = Math.max(0, totals.borrowedLoanTotal - totals.repaymentsTowardBorrowedLoans);
     const moneyOwedToMe = Math.max(0, totals.lentLoanTotal - totals.repaymentsTowardLentLoans);
+    const calculatedBalance = totals.income - totals.expenses - totals.savings - totals.repaymentsTowardBorrowedLoans - outstandingBorrowedDebt;
+    const fundsSnapshots = ledgerEvents
+      .filter(isUpdateFundsEvent)
+      .sort((a, b) => new Date(eventTime(b)).getTime() - new Date(eventTime(a)).getTime());
+    const latestFundsSnapshot = fundsSnapshots[0] || null;
+    const latestFundsAmount = latestFundsSnapshot ? eventAmount(latestFundsSnapshot) : null;
+    const reconciliationAdjustment = latestFundsSnapshot ? latestFundsAmount - calculatedBalance : 0;
 
     return {
       ...totals,
@@ -335,7 +368,12 @@ export default function FinancePage() {
       moneyOwedToMe,
       loanPeople: matchedLoanPeople,
       unmatchedRepayments,
-      net: totals.income - totals.expenses - totals.savings - totals.repaymentsTowardBorrowedLoans - outstandingBorrowedDebt,
+      net: calculatedBalance,
+      calculatedBalance,
+      latestFundsSnapshot,
+      reconciliationAdjustment,
+      displayedCurrentFunds: latestFundsSnapshot ? latestFundsAmount : calculatedBalance,
+      fundsSnapshots,
       averageIncome,
       incomeMonths: incomeMonths.length,
     };
@@ -361,8 +399,9 @@ export default function FinancePage() {
               Capture with <span className="font-semibold">/income</span>,{' '}
               <span className="font-semibold">/expense</span>,{' '}
               <span className="font-semibold">/loan</span>,{' '}
-              <span className="font-semibold">/repay</span>, or{' '}
-              <span className="font-semibold">/cashup</span>. Salary and card tips stay out of Finance OS unless entered as{' '}
+              <span className="font-semibold">/repay</span>,{' '}
+              <span className="font-semibold">/cashup</span>, or{' '}
+              <span className="font-semibold">/updatefunds</span>. Salary and card tips stay out of Finance OS unless entered as{' '}
               <span className="font-semibold">/income</span>.
             </p>
             <div className="flex flex-wrap gap-2">
@@ -435,11 +474,58 @@ export default function FinancePage() {
               <SummaryTile label="Total expenses" value={formatCurrency(summary.expenses)} accent="text-rose-700" />
               <SummaryTile label="Total savings" value={formatCurrency(summary.savings)} accent="text-sky-700" />
               <SummaryTile
+                label="Current funds"
+                value={formatCurrency(summary.displayedCurrentFunds)}
+                hint={summary.latestFundsSnapshot ? 'Latest reality snapshot from /updatefunds.' : 'Calculated from tracked commands.'}
+                accent="text-emerald-700"
+              />
+              <SummaryTile
                 label="Unassigned net"
                 value={formatCurrency(summary.net)}
                 hint="Income minus expenses, savings, repayments paid, and outstanding borrowed debt."
               />
             </div>
+
+            <Card
+              variant="neutral"
+              compact={false}
+              title="Funds reconciliation"
+              subtitle="Reality check from the latest /updatefunds command"
+              accent="#14b8a6"
+              className="text-left"
+            >
+              <div className="grid gap-3 md:grid-cols-3">
+                <SummaryTile label="Calculated balance" value={formatCurrency(summary.calculatedBalance)} />
+                <SummaryTile
+                  label="Latest funds update"
+                  value={summary.latestFundsSnapshot ? formatCurrency(eventAmount(summary.latestFundsSnapshot)) : 'No snapshot'}
+                  hint={summary.latestFundsSnapshot ? 'Only the newest /updatefunds affects current funds.' : 'Capture /updatefunds amount reason when reality differs.'}
+                  accent={summary.latestFundsSnapshot ? 'text-emerald-700' : 'text-text'}
+                />
+                <SummaryTile
+                  label={driftLabel(summary.reconciliationAdjustment)}
+                  value={formatCurrency(summary.reconciliationAdjustment)}
+                  hint="Latest funds update minus calculated balance."
+                  accent={summary.reconciliationAdjustment < 0 ? 'text-rose-700' : summary.reconciliationAdjustment > 0 ? 'text-emerald-700' : 'text-text'}
+                />
+              </div>
+
+              {summary.latestFundsSnapshot ? (
+                <div className="mt-4 rounded-lg border border-slate-200 bg-white/70 px-3 py-3 text-sm leading-relaxed text-text/70">
+                  <div>
+                    <span className="font-semibold text-text">Reason:</span>{' '}
+                    {summary.latestFundsSnapshot.payload?.reason || summary.latestFundsSnapshot.description || 'No reason recorded'}
+                  </div>
+                  <div className="mt-1 text-xs text-text/55">
+                    Updated {formatDateTime(eventTime(summary.latestFundsSnapshot))}
+                  </div>
+                </div>
+              ) : (
+                <div className="mt-4 rounded-lg border border-slate-200 bg-white/60 px-4 py-5 text-sm leading-relaxed text-text/70">
+                  Use /updatefunds when real cash differs from the system because something was missed.
+                </div>
+              )}
+            </Card>
 
             <div className="grid gap-3 lg:grid-cols-3">
               <TargetCard

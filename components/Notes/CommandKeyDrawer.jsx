@@ -11,12 +11,16 @@ const COMMAND_GROUPS = [
       { example: '/loan 500 Dad borrowed food', note: 'Track money borrowed or lent.' },
       { example: '/repay 200 Dad partial food loan', note: 'Log a repayment against an open loan.' },
       { example: '/cashup 7000 800 500', note: 'Add cashHome to personal Finance OS income.' },
+      { example: '/updatefunds 3200 actual wallet cash', note: 'Use /updatefunds when real cash differs from the system because something was missed.' },
     ],
   },
   {
     title: 'Bossa Tracking',
-    description: 'Optional shift detail. Table entries do not affect Finance OS totals.',
+    description: 'Schedule, shift detail, and optional table evidence.',
     commands: [
+      { example: '/weeklyshifts 8-4 4-10 off 10-6 12-8 4-10 4-10', note: 'Set this week’s planned Bossa shifts.' },
+      { example: '/clockin Bossa', note: 'Log shift start time from the note timestamp.' },
+      { example: '/clockout Bossa', note: 'Log shift end time from the note timestamp.' },
       { example: '/table 308 857 957', note: 'Log a table payment and tip.' },
     ],
   },
@@ -35,6 +39,24 @@ const COMMAND_GROUPS = [
       { example: '/note plain note text', note: 'Keep a plain note-shaped entry.' },
       { example: '/reflect reflection text', note: 'Capture reflection material.' },
       { example: '/quest Save R55k move-out fund', note: 'Shape a goal into a quest.' },
+    ],
+  },
+  {
+    title: 'Maintenance Loops',
+    description: 'Add or archive routine responsibilities that keep life stable.',
+    commands: [
+      { example: '/routine add Lock doors', note: 'Create an active maintenance loop.' },
+      { example: '/routine done Lock doors', note: 'Mark a loop complete for today.' },
+      { example: '/routine due', note: 'List active daily loops still pending.' },
+      { example: '/routine remove Lock doors', note: 'Archive the matching active loop.' },
+    ],
+  },
+  {
+    title: 'Personal Sessions',
+    description: 'Track personal/social sessions outside Bossa.',
+    commands: [
+      { example: '/partytime', note: 'Start an active personal party/social session.' },
+      { example: '/endpartytime', note: 'Close the active Party Time session.' },
     ],
   },
 ];
@@ -76,7 +98,7 @@ export default function CommandKeyDrawer({ className = '' }) {
             Start a note with a slash command when you want Selfware to structure the signal. Plain notes still work.
           </p>
 
-          <div className="grid gap-3 md:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-4">
             {COMMAND_GROUPS.map((group) => (
               <section key={group.title} className="rounded-md border border-white/10 bg-black/10 p-3">
                 <div className="text-xs font-semibold uppercase tracking-wide text-text/55">{group.title}</div>

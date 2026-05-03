@@ -34,6 +34,12 @@ const PORTAL_LINKS = [
     accent: '#34d399',
   },
   {
+    href: '/maintenance',
+    title: 'Maintenance Loops',
+    copy: 'Recurring responsibilities that keep life stable without turning into noise.',
+    accent: '#22d3ee',
+  },
+  {
     href: '/bossa-progress',
     title: 'Bossa Progress',
     copy: 'The first real-world tracking zone, reserved for practice and visible momentum.',

@@ -3,18 +3,31 @@ import Head from 'next/head';
 import Link from 'next/link';
 import Card from '@/components/CardKit/Card';
 import { usePageHeading } from '@/components/Layout/PageShell';
+import {
+  BOSSA_WEEKLY_SHIFTS_TABLE,
+  bossaScheduleMigrationMessage,
+  buildWeeklyShiftRows,
+  currentWeekStartDate,
+  dateForWeekday,
+  dateKey,
+  formatPlannedShift,
+  isMissingBossaScheduleTable,
+} from '@/lib/bossaSchedule';
 import { supabase } from '@/lib/supabaseClient';
 
 const PAGE_HEADING = {
   emoji: '',
   title: 'Bossa Tracking',
-  subtitle: 'Cashups and optional table detail from Notes.',
+  subtitle: 'Weekly shifts, clock data, cashups, and optional table detail from Notes.',
 };
 
-const BOSSA_COMMANDS = ['table', 'cashup'];
+const BOSSA_COMMANDS = ['table', 'cashup', 'clockin', 'clockout', 'weeklyshifts'];
 const BOSSA_EVENT_TYPES = [
   'waitering.table',
   'waitering.cashup',
+  'waitering.clockin',
+  'waitering.clockout',
+  'waitering.weeklyshifts',
 ];
 
 function amountValue(value) {
@@ -58,6 +71,18 @@ function isCashup(event) {
   return event?.command === 'cashup' || event?.event_type === 'waitering.cashup';
 }
 
+function isClockIn(event) {
+  return event?.command === 'clockin' || event?.event_type === 'waitering.clockin';
+}
+
+function isClockOut(event) {
+  return event?.command === 'clockout' || event?.event_type === 'waitering.clockout';
+}
+
+function isWeeklyShifts(event) {
+  return event?.command === 'weeklyshifts' || event?.event_type === 'waitering.weeklyshifts';
+}
+
 function SummaryTile({ label, value, hint, accent = 'text-text' }) {
   return (
     <div className="h-full rounded-lg border border-white/20 bg-white/55 px-4 py-3 shadow-sm">
@@ -79,15 +104,78 @@ function describeEvent(event) {
   if (isCashup(event)) {
     return `Cashup: ${formatCurrency(amounts.turnover)} turnover, ${formatCurrency(amounts.retained)} retained, ${formatCurrency(amounts.cashHome ?? amounts.cash)} cashHome.`;
   }
+  if (isClockIn(event)) {
+    return `Clock-in logged at ${formatTimestamp(eventTime(event))}.`;
+  }
+  if (isClockOut(event)) {
+    return `Clock-out logged at ${formatTimestamp(eventTime(event))}.`;
+  }
+  if (isWeeklyShifts(event)) {
+    return event.description || 'Weekly Bossa shifts updated.';
+  }
 
   return event?.raw || event?.label || 'Bossa tracking event';
+}
+
+function addDays(dateString, days) {
+  const date = new Date(`${dateString}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return dateString;
+  date.setDate(date.getDate() + days);
+  return dateKey(date);
+}
+
+function eventTimeOnly(event) {
+  const timestamp = eventTime(event);
+  if (!timestamp) return '';
+  const date = new Date(timestamp);
+  if (Number.isNaN(date.getTime())) return '';
+  return new Intl.DateTimeFormat(undefined, {
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
+}
+
+function WeeklyShiftStatus({ row }) {
+  const planned = row.planned;
+  const hasClockin = Boolean(row.clockin);
+  const hasClockout = Boolean(row.clockout);
+
+  let label = 'Not set';
+  let className = 'border-slate-200 bg-white/70 text-text/65';
+
+  if (planned?.status === 'off') {
+    label = hasClockin || hasClockout ? 'Extra shift' : 'Off';
+    className = hasClockin || hasClockout
+      ? 'border-cyan-200 bg-cyan-50 text-cyan-800'
+      : 'border-slate-200 bg-white/70 text-text/65';
+  } else if (planned?.status === 'scheduled') {
+    if (hasClockin && hasClockout) {
+      label = 'Clocked';
+      className = 'border-emerald-200 bg-emerald-50 text-emerald-800';
+    } else if (hasClockin) {
+      label = 'In progress';
+      className = 'border-amber-200 bg-amber-50 text-amber-800';
+    } else {
+      label = 'Planned';
+      className = 'border-blue-200 bg-blue-50 text-blue-800';
+    }
+  }
+
+  return (
+    <span className={`inline-flex rounded-full border px-2 py-1 text-xs font-semibold ${className}`}>
+      {label}
+    </span>
+  );
 }
 
 export default function BossaIncomePage() {
   const [user, setUser] = useState(null);
   const [events, setEvents] = useState([]);
+  const [weeklyShifts, setWeeklyShifts] = useState([]);
+  const [weekStartDate, setWeekStartDate] = useState(() => currentWeekStartDate());
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
+  const [scheduleError, setScheduleError] = useState(null);
 
   usePageHeading(PAGE_HEADING);
 
@@ -115,6 +203,27 @@ export default function BossaIncomePage() {
     setEvents(data || []);
   }, []);
 
+  const loadWeeklyShifts = useCallback(async (ownerId) => {
+    if (!ownerId) {
+      setWeeklyShifts([]);
+      return;
+    }
+
+    const resolvedWeekStart = currentWeekStartDate();
+    setWeekStartDate(resolvedWeekStart);
+    setScheduleError(null);
+
+    const { data, error } = await supabase
+      .from(BOSSA_WEEKLY_SHIFTS_TABLE)
+      .select('*')
+      .eq('owner_id', ownerId)
+      .eq('week_start_date', resolvedWeekStart)
+      .order('day_of_week', { ascending: true });
+
+    if (error) throw error;
+    setWeeklyShifts(data || []);
+  }, []);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -132,8 +241,19 @@ export default function BossaIncomePage() {
 
         if (resolvedUser?.id) {
           await loadBossaEvents(resolvedUser.id);
+          try {
+            await loadWeeklyShifts(resolvedUser.id);
+          } catch (scheduleLoadError) {
+            if (isMissingBossaScheduleTable(scheduleLoadError)) {
+              setScheduleError(bossaScheduleMigrationMessage());
+            } else {
+              setScheduleError(scheduleLoadError?.message || 'Could not load weekly shifts.');
+            }
+            setWeeklyShifts([]);
+          }
         } else {
           setEvents([]);
+          setWeeklyShifts([]);
         }
       } catch (error) {
         if (!cancelled) setLoadError(error?.message || 'Could not load Bossa tracking.');
@@ -147,7 +267,7 @@ export default function BossaIncomePage() {
     return () => {
       cancelled = true;
     };
-  }, [loadBossaEvents]);
+  }, [loadBossaEvents, loadWeeklyShifts]);
 
   const summary = useMemo(() => {
     const cashupEvents = events.filter(isCashup);
@@ -170,6 +290,21 @@ export default function BossaIncomePage() {
     };
   }, [events]);
 
+  const weeklyRows = useMemo(() => {
+    const weekEndDate = addDays(weekStartDate, 7);
+    const clockEvents = events.filter((event) => {
+      if (!isClockIn(event) && !isClockOut(event)) return false;
+      const key = dateKey(eventTime(event));
+      return key >= weekStartDate && key < weekEndDate;
+    });
+
+    return buildWeeklyShiftRows({
+      weekStartDate,
+      shifts: weeklyShifts,
+      clockEvents,
+    });
+  }, [events, weekStartDate, weeklyShifts]);
+
   return (
     <>
       <Head>
@@ -181,14 +316,14 @@ export default function BossaIncomePage() {
           variant="neutral"
           compact={false}
           title="Bossa tracking"
-          subtitle="/cashup adds cashHome to Finance OS. /table tracks optional table detail."
+          subtitle="/weeklyshifts plans the week. /clockin and /clockout show actuals. /cashup feeds Finance OS."
           accent="#f59e0b"
           className="text-left"
         >
           <div className="flex flex-col gap-3 text-sm leading-relaxed text-text/75 sm:flex-row sm:items-center sm:justify-between">
             <p>
               Use <span className="font-semibold">/cashup</span> for shift cash taken home and{' '}
-              <span className="font-semibold">/table</span> when you want extra table detail.
+              <span className="font-semibold">/weeklyshifts</span> for the planned rota.
             </p>
             <div className="flex flex-wrap gap-2">
               <Link
@@ -231,6 +366,63 @@ export default function BossaIncomePage() {
               <SummaryTile label="Tables logged" value={summary.tableEvents.length} />
               <SummaryTile label="Table-derived tips" value={formatCurrency(summary.tableTipsTotal)} accent="text-cyan-700" />
             </div>
+
+            <Card
+              variant="neutral"
+              compact={false}
+              title="Weekly Shifts"
+              subtitle={`Week of ${weekStartDate}`}
+              accent="#f59e0b"
+              className="text-left"
+            >
+              {scheduleError ? (
+                <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                  {scheduleError}
+                </div>
+              ) : null}
+              <div className="overflow-x-auto">
+                <table className="min-w-full border-separate border-spacing-y-2 text-left text-sm">
+                  <thead>
+                    <tr className="text-xs uppercase tracking-wide text-text/55">
+                      <th className="px-3 py-1 font-semibold">Day</th>
+                      <th className="px-3 py-1 font-semibold">Planned shift</th>
+                      <th className="px-3 py-1 font-semibold">Actual clock-in/out</th>
+                      <th className="px-3 py-1 font-semibold">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {weeklyRows.map((row) => {
+                      const clockin = eventTimeOnly(row.clockin);
+                      const clockout = eventTimeOnly(row.clockout);
+                      const actual = clockin || clockout
+                        ? `${clockin || 'Not clocked in'} - ${clockout || 'Not clocked out'}`
+                        : 'No actual data yet';
+
+                      return (
+                        <tr key={row.day_of_week} className="rounded-lg bg-white/65 shadow-sm">
+                          <td className="rounded-l-lg border-y border-l border-slate-200 px-3 py-3">
+                            <div className="font-semibold text-text">{row.label}</div>
+                            <div className="text-xs text-text/45">{dateForWeekday(weekStartDate, row.day_of_week)}</div>
+                          </td>
+                          <td className="border-y border-slate-200 px-3 py-3 text-text/75">
+                            {formatPlannedShift(row.planned)}
+                          </td>
+                          <td className="border-y border-slate-200 px-3 py-3 text-text/75">
+                            {actual}
+                          </td>
+                          <td className="rounded-r-lg border-y border-r border-slate-200 px-3 py-3">
+                            <WeeklyShiftStatus row={row} />
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+              <p className="mt-3 text-xs leading-relaxed text-text/50">
+                Week start uses the browser/server local date because no dedicated timezone helper exists yet.
+              </p>
+            </Card>
 
             <Card
               variant="neutral"

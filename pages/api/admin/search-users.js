@@ -1,23 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
-import { requireUser } from '@/lib/supabaseServer';
-
-function parseAdminUserIds() {
-  return String(process.env.ADMIN_USER_IDS || '')
-    .split(',')
-    .map((value) => value.trim())
-    .filter(Boolean);
-}
-
-async function userOwnsAnyHousehold(supabase, userId) {
-  const { count, error } = await supabase
-    .from('household_members')
-    .select('household_id', { count: 'exact', head: true })
-    .eq('user_id', userId)
-    .eq('role', 'owner');
-
-  if (error) throw error;
-  return Number(count || 0) > 0;
-}
+import { requireAdminAccess } from '@/lib/auth/adminAccess';
+import { getServiceClient, requireUser } from '@/lib/supabaseServer';
 
 function pickDisplayName(user) {
   const metadata = user?.user_metadata || user?.raw_user_meta_data || {};
@@ -47,34 +29,6 @@ function matchesQuery(user, query) {
   return fields.some((value) => value.includes(query));
 }
 
-function createAdminServiceClient() {
-  const supabaseUrl = String(process.env.NEXT_PUBLIC_SUPABASE_URL || '').trim();
-  const serviceRoleKey = String(process.env.SUPABASE_SERVICE_ROLE_KEY || '').trim();
-
-  if (!supabaseUrl) {
-    return { error: 'Admin search requires NEXT_PUBLIC_SUPABASE_URL.' };
-  }
-
-  if (!serviceRoleKey) {
-    return { error: 'Admin search requires SUPABASE_SERVICE_ROLE_KEY.' };
-  }
-
-  if (!supabaseUrl.startsWith('https://') || !supabaseUrl.includes('.supabase.co')) {
-    return { error: 'Invalid Supabase URL for admin search.' };
-  }
-
-  console.error('[admin/search-users] Supabase URL:', supabaseUrl);
-
-  return {
-    client: createClient(supabaseUrl, serviceRoleKey, {
-      auth: {
-        autoRefreshToken: false,
-        persistSession: false,
-      },
-    }),
-  };
-}
-
 export default async function handler(req, res) {
   if (req.method !== 'GET') {
     return res.status(405).json({ error: 'Method not allowed.' });
@@ -82,13 +36,7 @@ export default async function handler(req, res) {
 
   try {
     const { user, supabase } = await requireUser(req);
-    const adminUserIds = parseAdminUserIds();
-    const isAllowlistedAdmin = adminUserIds.includes(user.id);
-    const isHouseholdOwner = await userOwnsAnyHousehold(supabase, user.id);
-
-    if (!isAllowlistedAdmin && !isHouseholdOwner) {
-      return res.status(403).json({ error: 'You do not have admin access.' });
-    }
+    await requireAdminAccess(supabase, user);
 
     const query = String(req.query?.q || '').trim().toLowerCase();
     if (!query) {
@@ -98,10 +46,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'q must be at least 2 characters.' });
     }
 
-    const { client: serviceClient, error: serviceClientError } = createAdminServiceClient();
-    if (serviceClientError) {
-      return res.status(500).json({ error: serviceClientError });
-    }
+    const serviceClient = getServiceClient();
 
     const matches = [];
     const maxResults = 10;
@@ -128,6 +73,10 @@ export default async function handler(req, res) {
   } catch (error) {
     if (error?.message === 'Unauthorized') {
       return res.status(401).json({ error: 'Please sign in.' });
+    }
+
+    if (error?.statusCode === 403 || error?.message === 'Forbidden') {
+      return res.status(403).json({ error: 'You do not have admin access.' });
     }
 
     console.error('Admin user search failed', error);
