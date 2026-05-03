@@ -273,7 +273,7 @@ export default function AdminMembersPage() {
                 onClick={handleCopyTaskerToken}
                 className="rounded-md bg-amber-600 px-4 py-2 text-sm font-semibold text-white shadow"
               >
-                Copy Supabase Access Token
+                Copy Tasker Access Token
               </button>
             </div>
 

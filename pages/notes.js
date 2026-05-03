@@ -451,8 +451,10 @@ export default function NotesPage() {
           console.error('Failed to apply routine command', routineError);
           if (isMissingMaintenanceLoopEnforcementSchema(routineError)) {
             setWarning(`Note saved, but routine command needs database setup. ${maintenanceLoopEnforcementMigrationMessage()}`);
+          } else if (routineError?.statusCode && routineError.statusCode < 500) {
+            setWarning(routineError.message || 'Routine command could not be applied.');
           } else {
-            setWarning(routineError?.message || 'Note saved, but the maintenance loop could not be updated.');
+            setWarning('Note saved, but the maintenance loop could not be updated. Check development logs for details.');
           }
         }
       }
